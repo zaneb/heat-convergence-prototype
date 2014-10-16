@@ -18,4 +18,6 @@ def main():
 
     from . import processes
 
+    processes.engine.create_stack('foo')
+
     processes.event_loop()
