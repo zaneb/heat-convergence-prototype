@@ -1,5 +1,6 @@
 from .framework import process
 from . import stack
+from . import template
 
 
 class Engine(process.MessageProcessor):
@@ -7,6 +8,8 @@ class Engine(process.MessageProcessor):
         super(Engine, self).__init__('engine')
 
     @process.asynchronous
-    def create_stack(self, stack_name):
-        new_stack = stack.Stack(stack_name)
+    def create_stack(self, stack_name, tmpl):
+        tmpl.store()
+
+        new_stack = stack.Stack(stack_name, tmpl)
         new_stack.create()

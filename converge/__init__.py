@@ -17,7 +17,15 @@ def main():
         setup_log(logging.root)
 
     from . import processes
+    from . import template
 
-    processes.engine.create_stack('foo')
+    example_template = template.Template({
+        'A': template.RsrcDef({}, []),
+        'B': template.RsrcDef({}, []),
+        'C': template.RsrcDef({}, ['A', 'B']),
+        'D': template.RsrcDef({'c': template.GetRes('C')}, []),
+        'E': template.RsrcDef({'ca': template.GetAtt('C', 'a')}, []),
+    })
+    processes.engine.create_stack('foo', example_template)
 
     processes.event_loop()

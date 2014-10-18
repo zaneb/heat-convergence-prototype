@@ -3,19 +3,22 @@ import logging
 from .framework import datastore
 
 from . import resource
+from . import template
 
 
 logger = logging.getLogger('stack')
 
 stacks = datastore.Datastore('Stack',
-                             'key', 'name')
+                             'key', 'name', 'tmpl_key')
 
 
 class Stack(object):
-    def __init__(self, name, key=None):
+    def __init__(self, name, tmpl, key=None):
         self.key = key
+        self.tmpl = tmpl
         self.data = {
             'name': name,
+            'tmpl_key': tmpl.key,
         }
 
     def __str__(self):
@@ -23,7 +26,9 @@ class Stack(object):
 
     @classmethod
     def load(cls, key):
-        return cls(**stacks.read(key)._asdict())
+        s = stacks.read(key)
+        return cls(s.name, template.Template.load(s.tmpl_key),
+                   key=s.key)
 
     def store(self):
         if self.key is None:
@@ -36,8 +41,8 @@ class Stack(object):
 
         logger.info('[%s(%d)] Created' % (self.data['name'], self.key))
 
-        res_names = ('A', 'B', 'C')
-        resources = {name: resource.Resource(name, self) for name in res_names}
+        resources = {name: resource.Resource(name, self, defn)
+                         for name, defn in self.tmpl.resources.items()}
 
         for rsrc in resources.values():
             rsrc.store()

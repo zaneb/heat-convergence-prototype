@@ -12,11 +12,12 @@ resources = datastore.Datastore('Resource',
 
 
 class Resource(object):
-    def __init__(self, name, stack, phys_id=None,
+    def __init__(self, name, stack, defn, phys_id=None,
                  key=None):
         self.key = key
         self.name = name
         self.stack = stack
+        self.defn = defn
         self.physical_resource_id = phys_id
 
     @classmethod
@@ -25,6 +26,7 @@ class Resource(object):
 
         loaded = resources.read(key)
         return cls(loaded.name, stack.Stack.load(loaded.stack_key),
+                   None,
                    loaded.phys_id,
                    loaded.key)
 
