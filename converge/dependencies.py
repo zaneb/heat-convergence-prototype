@@ -200,6 +200,12 @@ class Dependencies(object):
 
         return self._graph[last].required_by()
 
+    def leaves(self):
+        '''
+        Return an iterator over all of the leaf nodes in the graph.
+        '''
+        return (key for key, node in self._graph.items() if not node)
+
     def __getitem__(self, last):
         '''
         Return a partial dependency graph consisting of the specified node and

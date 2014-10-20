@@ -44,9 +44,13 @@ class Stack(object):
         resources = {name: resource.Resource(name, self, defn)
                          for name, defn in self.tmpl.resources.items()}
 
-        for rsrc in resources.values():
-            rsrc.store()
+        deps = self.tmpl.dependencies()
+        logger.debug('[%s(%d)] Dependencies: %s' % (self.data['name'],
+                                                    self.key, deps.graph()))
+
+        for rsrc_name in deps:
+            resources[rsrc_name].store()
 
         from . import processes
-        for rsrc in resources.values():
-            processes.converger.check_resource(rsrc.key)
+        for rsrc_name in deps.leaves():
+            processes.converger.check_resource(resources[rsrc_name].key)

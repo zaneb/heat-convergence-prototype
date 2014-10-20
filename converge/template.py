@@ -2,6 +2,7 @@ import logging
 
 from .framework import datastore
 
+from . import dependencies
 from . import resource
 
 
@@ -63,3 +64,8 @@ class Template(object):
             self.key = templates.create(resources=self.resources)
         else:
             templates.update(self.key)
+
+    def dependencies(self):
+        edges = ((name, dep_name) for name, defn in self.resources.items()
+                                  for dep_name in defn.dependency_names())
+        return dependencies.Dependencies(edges)
