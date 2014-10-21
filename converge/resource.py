@@ -8,16 +8,18 @@ logger = logging.getLogger('rsrcs')
 
 
 resources = datastore.Datastore('Resource',
-                                'key', 'stack_key', 'name', 'phys_id')
+                                'key', 'stack_key', 'name', 'requirers',
+                                'phys_id')
 
 
 class Resource(object):
-    def __init__(self, name, stack, defn, phys_id=None,
+    def __init__(self, name, stack, defn, requirers=[], phys_id=None,
                  key=None):
         self.key = key
         self.name = name
         self.stack = stack
         self.defn = defn
+        self.requirers = requirers
         self.physical_resource_id = phys_id
 
     @classmethod
@@ -27,6 +29,7 @@ class Resource(object):
         loaded = resources.read(key)
         return cls(loaded.name, stack.Stack.load(loaded.stack_key),
                    None,
+                   loaded.requirers,
                    loaded.phys_id,
                    loaded.key)
 
@@ -34,7 +37,8 @@ class Resource(object):
         data = {
             'name': self.name,
             'stack_key': self.stack.key,
-            'phys_id': self.physical_resource_id
+            'requirers': self.requirers,
+            'phys_id': self.physical_resource_id,
         }
 
         if self.key is None:

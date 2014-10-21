@@ -41,16 +41,20 @@ class Stack(object):
 
         logger.info('[%s(%d)] Created' % (self.data['name'], self.key))
 
-        resources = {name: resource.Resource(name, self, defn)
-                         for name, defn in self.tmpl.resources.items()}
-
+        definitions = self.tmpl.resources
         deps = self.tmpl.dependencies()
         logger.debug('[%s(%d)] Dependencies: %s' % (self.data['name'],
                                                     self.key, deps.graph()))
 
-        for rsrc_name in deps:
-            resources[rsrc_name].store()
+        resources = {}
+        for rsrc_name in reversed(deps):
+            requirers = [resources[r].key for r in deps.required_by(rsrc_name)]
+            rsrc = resource.Resource(rsrc_name, self, definitions[rsrc_name],
+                                     requirers)
+            rsrc.store()
+            resources[rsrc_name] = rsrc
 
         from . import processes
         for rsrc_name in deps.leaves():
-            processes.converger.check_resource(resources[rsrc_name].key)
+            processes.converger.check_resource(resources[rsrc_name].key,
+                                               self.tmpl.key)
