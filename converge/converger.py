@@ -16,16 +16,16 @@ class Converger(process.MessageProcessor):
     @process.asynchronous
     def check_resource(self, resource_key, template_key):
         rsrc = resource.Resource.load(resource_key)
-        tmpl = template.Template.load(template_key)
 
         if rsrc.physical_resource_id is None:
             rsrc.create()
 
-        for req in rsrc.requirers:
-            req_rsrc = resource.Resource.load(req)
-            predecessors = tmpl.resources[req_rsrc.name].dependency_names()
+        deps = rsrc.stack.dependencies()
+        graph = deps.graph()
+
+        for req in deps.required_by(resource_key):
             self.propagate_check_resource(req, template_key,
-                                          set(predecessors), rsrc.name)
+                                          set(graph[req]), rsrc.key)
 
     def propagate_check_resource(self, next_resource_key, template_key,
                                  predecessors, sender):
