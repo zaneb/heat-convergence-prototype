@@ -10,5 +10,5 @@ class EventLoop(object):
         self.processors = processors
 
     def __call__(self):
-        while any(processor() for processor in self.processors):
+        while any([processor() for processor in self.processors]):
             continue

@@ -12,6 +12,9 @@ class MessageQueue(object):
     def send(self, name, data=None):
         self._queue.append(Message(name, data))
 
+    def send_priority(self, name, data=None):
+        self._queue.appendleft(Message(name, data))
+
     def get(self):
         try:
             return self._queue.popleft()

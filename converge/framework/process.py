@@ -55,3 +55,13 @@ class MessageProcessor(object):
 
         method(message.data)
         return True
+
+    @asynchronous
+    def noop(self, count=1):
+        '''
+        Insert <count> No-op operations in the message queue.
+        '''
+        assert isinstance(count, int)
+        if count > 1:
+            self.queue.send_priority('noop',
+                                     self.noop.MessageData(count - 1))
