@@ -14,6 +14,13 @@ class Datastore(object):
         self.ids = itertools.count()
         self.DataType = collections.namedtuple(name, fields)
 
+    def find(self, **kwargs):
+        for key, row in self._store.items():
+            reference = dict((k, v) for k, v in row._asdict().items()
+                                    if k in kwargs)
+            if reference == kwargs:
+                yield key
+
     def create_with_key(self, key, **kwargs):
         logger.debug('[%s] Creating %s' % (self.name, key))
         self._store[key] = self.DataType(key, **copy.deepcopy(kwargs))
