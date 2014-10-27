@@ -17,6 +17,10 @@ class Converger(process.MessageProcessor):
     def check_resource(self, resource_key, template_key):
         rsrc = resource.Resource.load(resource_key)
 
+        if rsrc.stack.tmpl.key != template_key:
+            # Out of date
+            return
+
         if rsrc.physical_resource_id is None:
             rsrc.create()
 
