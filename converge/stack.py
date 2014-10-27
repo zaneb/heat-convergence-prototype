@@ -67,8 +67,11 @@ class Stack(object):
         rsrcs = {r.name: r for r in resource.Resource.load_all_from_stack(self)
                            if r.template_key == current_tmpl_key}
 
+        def key(r):
+            return resource.GraphKey(r, rsrcs[r].key)
+
         def store_resource(name):
-            requirers = [rsrcs[r].key for r in tmpl_deps.required_by(name)]
+            requirers = [key(r) for r in tmpl_deps.required_by(name)]
             rsrc = resource.Resource(rsrc_name, self, definitions[name],
                                      self.tmpl.key, set(requirers))
             rsrc.store()
@@ -79,11 +82,10 @@ class Stack(object):
                 rsrcs[rsrc_name] = store_resource(rsrc_name)
             else:
                 rsrc = rsrcs[rsrc_name]
-                rsrc.requirers |= set(rsrcs[r].key for r in
+                rsrc.requirers |= set(key(r) for r in
                         tmpl_deps.required_by(rsrc.name))
                 rsrc.store()
 
         from . import processes
         for rsrc_name in tmpl_deps.leaves():
-            processes.converger.check_resource(rsrcs[rsrc_name].key,
-                                               self.tmpl.key)
+            processes.converger.check_resource(key(rsrc_name), self.tmpl.key)

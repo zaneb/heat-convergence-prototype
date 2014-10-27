@@ -19,7 +19,7 @@ class Converger(process.MessageProcessor):
 
     @process.asynchronous
     def check_resource(self, resource_key, template_key):
-        rsrc = resource.Resource.load(resource_key)
+        rsrc = resource.Resource.load(resource_key.key)
         tmpl = template.Template.load(template_key)
 
         if rsrc.stack.tmpl.key != template_key:
@@ -30,19 +30,18 @@ class Converger(process.MessageProcessor):
             rsrc.create(template_key)
 
         for req in rsrc.requirers:
-            req_rsrc = resource.Resource.load(req)
-            predecessors = tmpl.resources[req_rsrc.name].dependency_names()
+            predecessors = tmpl.resources[req.name].dependency_names()
             self.propagate_check_resource(req, template_key,
                                           set(predecessors), rsrc.name)
 
-    def propagate_check_resource(self, next_resource_key, template_key,
+    def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender):
         if len(predecessors) == 1:
             # Cut to the chase
-            self.check_resource(next_resource_key, template_key)
+            self.check_resource(next_res_graph_key, template_key)
             return
 
-        key = '%d-%d' % (next_resource_key, template_key)
+        key = '%s-%s' % (next_res_graph_key.key, template_key)
         try:
             sync_point = sync_points.read(key)
         except KeyError:
@@ -52,7 +51,7 @@ class Converger(process.MessageProcessor):
             satisfied = sync_point.satisfied + [sender]
             predecessors |= sync_point.predecessors
             if set(satisfied).issuperset(predecessors):
-                self.check_resource(next_resource_key, template_key)
+                self.check_resource(next_res_graph_key, template_key)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
