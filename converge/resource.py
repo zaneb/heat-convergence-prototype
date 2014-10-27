@@ -1,3 +1,4 @@
+import collections
 import logging
 import uuid
 
@@ -6,6 +7,7 @@ from .framework import datastore
 
 logger = logging.getLogger('rsrcs')
 
+GraphKey = collections.namedtuple('GraphKey', ['name', 'key', 'forward'])
 
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'phys_id')
@@ -38,6 +40,9 @@ class Resource(object):
     def load_all_from_stack(cls, stack):
         stored = resources.find(stack_key=stack.key)
         return (cls._load_from_store(key, lambda sk: stack) for key in stored)
+
+    def graph_key(self, forward=True):
+        return GraphKey(self.name, self.key, forward)
 
     def store(self):
         data = {

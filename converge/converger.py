@@ -27,18 +27,22 @@ class Converger(process.MessageProcessor):
         deps = rsrc.stack.dependencies()
         graph = deps.graph()
 
-        for req in deps.required_by(resource_key):
+        graph_key = rsrc.graph_key()
+        for req in deps.required_by(graph_key):
             self.propagate_check_resource(req, template_key,
-                                          set(graph[req]), rsrc.key)
+                                          set(graph[req]), graph_key)
 
-    def propagate_check_resource(self, next_resource_key, template_key,
+    def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender):
         if len(predecessors) == 1:
             # Cut to the chase
-            self.check_resource(next_resource_key, template_key)
+            if next_res_graph_key.forward:
+                self.check_resource(next_res_graph_key.key, template_key)
             return
 
-        key = '%d-%d' % (next_resource_key, template_key)
+        key = '%s-%s-%s' % (next_res_graph_key.key,
+                            template_key,
+                            next_res_graph_key.forward and 'F' or 'R')
         try:
             sync_point = sync_points.read(key)
         except KeyError:
@@ -48,7 +52,8 @@ class Converger(process.MessageProcessor):
             satisfied = sync_point.satisfied + [sender]
             predecessors |= sync_point.predecessors
             if set(satisfied).issuperset(predecessors):
-                self.check_resource(next_resource_key, template_key)
+                if next_res_graph_key.forward:
+                    self.check_resource(next_res_graph_key.key, template_key)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic

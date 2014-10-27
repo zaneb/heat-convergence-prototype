@@ -66,7 +66,7 @@ class Stack(object):
 
         resources = {name: store_resource(name) for name in deps}
 
-        rsrc_deps = deps.translate(lambda rname: resources[rname].key)
+        rsrc_deps = deps.translate(lambda rname: resources[rname].graph_key())
         self.data['deps'] += tuple(rsrc_deps.graph().edges())
         self.store()
 
