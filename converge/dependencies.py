@@ -206,6 +206,18 @@ class Dependencies(object):
         '''
         return (key for key, node in self._graph.items() if not node)
 
+    def translate(self, transform):
+        '''
+        Translate all of the nodes using a transform function.
+
+        Returns a new Dependencies object.
+        '''
+        def transform_key(key):
+            return transform(key) if key is not None else None
+
+        edges = self._graph.edges()
+        return type(self)(tuple(map(transform_key, e)) for e in edges)
+
     def __getitem__(self, last):
         '''
         Return a partial dependency graph consisting of the specified node and

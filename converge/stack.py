@@ -66,11 +66,8 @@ class Stack(object):
 
         resources = {name: store_resource(name) for name in deps}
 
-        def get_res_id(rsrc_name):
-            return resources[rsrc_name].key if rsrc_name is not None else None
-
-        edges = tuple(tuple(map(get_res_id, e)) for e in deps.graph().edges())
-        self.data['deps'] += edges
+        rsrc_deps = deps.translate(lambda rname: resources[rname].key)
+        self.data['deps'] += tuple(rsrc_deps.graph().edges())
         self.store()
 
         from . import processes
