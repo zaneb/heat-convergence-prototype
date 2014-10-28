@@ -49,7 +49,9 @@ class Stack(object):
     def dependencies(self):
         return dependencies.Dependencies(self.data['deps'])
 
-    def _calc_dependencies(self, tmpl_deps, resources, current_res_names):
+    def _calc_dependencies(self, tmpl_deps, resources, current_res_names,
+                           existing_res_keys):
+
         def make_graph_key(rsrc_name):
             return resources[rsrc_name].graph_key()
 
@@ -64,8 +66,9 @@ class Stack(object):
             if targ is not None and targ.forward and src.forward:
                 deps += (reverse_key(targ), reverse_key(src))
 
-            # Keep existing clean up dependencies
-            elif not src.forward and (targ is None or not targ.forward):
+            # Keep existing clean up dependencies if the resources still exist
+            elif (not src.forward and (targ is None or not targ.forward) and
+                    existing_res_keys.issuperset(edge)):
                 deps += edge
 
             # Clean up only after handling the current resources
@@ -98,8 +101,10 @@ class Stack(object):
 
     def _create_or_update(self):
         current_graph = self.dependencies().graph()
-        rsrcs = {r.name: r for r in resource.Resource.load_all_from_stack(self)
-                           if r.graph_key() in current_graph}
+        ext_rsrcs = {r.graph_key(): r
+                         for r in resource.Resource.load_all_from_stack(self)}
+        rsrcs = {r.name: r for gk, r in ext_rsrcs.items()
+                           if gk in current_graph}
 
 
         def store_resource(rsrc_name):
@@ -116,7 +121,8 @@ class Stack(object):
                 rsrcs[rsrc_name] = store_resource(rsrc_name)
 
         deps = self._calc_dependencies(tmpl_deps, rsrcs,
-                                       set(current_res_names))
+                                       set(current_res_names),
+                                       set(ext_rsrcs.keys()))
         list(deps) # Check for circular dependencies
         self.data['deps'] = tuple(deps.graph().edges())
 
