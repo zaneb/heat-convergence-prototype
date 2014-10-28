@@ -115,6 +115,6 @@ class Stack(object):
 
         from . import processes
         for graph_key in deps.leaves():
-            if graph_key.forward:
-                processes.converger.check_resource(graph_key.key,
-                                                   self.tmpl.key)
+            processes.converger.check_resource(graph_key.key,
+                                               self.tmpl.key,
+                                               graph_key.forward)

@@ -13,21 +13,35 @@ class Converger(process.MessageProcessor):
     def __init__(self):
         super(Converger, self).__init__('converger')
 
-    @process.asynchronous
-    def check_resource(self, resource_key, template_key):
-        rsrc = resource.Resource.load(resource_key)
-
+    def check_resource_update(self, rsrc, template_key):
         if rsrc.stack.tmpl.key != template_key:
             # Out of date
-            return
+            return False
 
         if rsrc.physical_resource_id is None:
             rsrc.create()
 
+        return True
+
+    def check_resource_cleanup(self, rsrc, template_key):
+        return True
+
+    @process.asynchronous
+    def check_resource(self, resource_key, template_key, forward):
+        rsrc = resource.Resource.load(resource_key)
+
+        if forward:
+            do_check = self.check_resource_update
+        else:
+            do_check = self.check_resource_cleanup
+
+        if not do_check(rsrc, template_key):
+            return
+
         deps = rsrc.stack.dependencies()
         graph = deps.graph()
 
-        graph_key = rsrc.graph_key()
+        graph_key = rsrc.graph_key(forward)
         for req in deps.required_by(graph_key):
             self.propagate_check_resource(req, template_key,
                                           set(graph[req]), graph_key)
@@ -36,8 +50,8 @@ class Converger(process.MessageProcessor):
                                  predecessors, sender):
         if len(predecessors) == 1:
             # Cut to the chase
-            if next_res_graph_key.forward:
-                self.check_resource(next_res_graph_key.key, template_key)
+            self.check_resource(next_res_graph_key.key, template_key,
+                                next_res_graph_key.forward)
             return
 
         key = '%s-%s-%s' % (next_res_graph_key.key,
@@ -52,8 +66,8 @@ class Converger(process.MessageProcessor):
             satisfied = sync_point.satisfied + [sender]
             predecessors |= sync_point.predecessors
             if set(satisfied).issuperset(predecessors):
-                if next_res_graph_key.forward:
-                    self.check_resource(next_res_graph_key.key, template_key)
+                self.check_resource(next_res_graph_key.key, template_key,
+                                    next_res_graph_key.forward)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
