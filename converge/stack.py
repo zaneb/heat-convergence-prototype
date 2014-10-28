@@ -49,7 +49,7 @@ class Stack(object):
     def dependencies(self):
         return dependencies.Dependencies(self.data['deps'])
 
-    def _calc_dependencies(self, tmpl_deps, resources):
+    def _calc_dependencies(self, tmpl_deps, resources, current_res_names):
         def make_graph_key(rsrc_name):
             return resources[rsrc_name].graph_key()
 
@@ -71,7 +71,7 @@ class Stack(object):
             # Clean up only after handling the current resources
             for node in edge:
                 if (node is not None and
-                        node.forward and node.name in resources):
+                        node.forward and node.name in current_res_names):
                     deps += (reverse_key(node), make_graph_key(node.name))
 
         return deps
@@ -89,6 +89,13 @@ class Stack(object):
         logger.info('[%s(%d)] Updating...' % (self.data['name'], self.key))
         self._create_or_update()
 
+    def delete(self):
+        self.tmpl = template.Template()
+        self.data['tmpl_key'] = None
+
+        logger.info('[%s(%d)] Deleting...' % (self.data['name'], self.key))
+        self._create_or_update()
+
     def _create_or_update(self):
         current_graph = self.dependencies().graph()
         rsrcs = {r.name: r for r in resource.Resource.load_all_from_stack(self)
@@ -102,12 +109,14 @@ class Stack(object):
 
         definitions = self.tmpl.resources
         tmpl_deps = self.tmpl.dependencies()
+        current_res_names = list(tmpl_deps)
 
-        for rsrc_name in tmpl_deps:
+        for rsrc_name in current_res_names:
             if rsrc_name not in rsrcs:
                 rsrcs[rsrc_name] = store_resource(rsrc_name)
 
-        deps = self._calc_dependencies(tmpl_deps, rsrcs)
+        deps = self._calc_dependencies(tmpl_deps, rsrcs,
+                                       set(current_res_names))
         list(deps) # Check for circular dependencies
         self.data['deps'] = tuple(deps.graph().edges())
 

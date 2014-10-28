@@ -20,3 +20,8 @@ class Engine(process.MessageProcessor):
 
         existing_stack = stack.Stack.load_by_name(stack_name)
         existing_stack.update(tmpl)
+
+    @process.asynchronous
+    def delete_stack(self, stack_name):
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.delete()

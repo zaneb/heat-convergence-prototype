@@ -24,6 +24,9 @@ class Converger(process.MessageProcessor):
         return True
 
     def check_resource_cleanup(self, rsrc, template_key):
+        if rsrc.name not in rsrc.stack.tmpl.resources:
+            rsrc.delete()
+
         return True
 
     @process.asynchronous
