@@ -57,6 +57,8 @@ class Template(object):
 
     @classmethod
     def load(cls, key):
+        if key is None:
+            return cls()
         return cls(**templates.read(key)._asdict())
 
     def store(self):
