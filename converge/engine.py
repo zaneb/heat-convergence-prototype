@@ -13,3 +13,10 @@ class Engine(process.MessageProcessor):
 
         new_stack = stack.Stack(stack_name, tmpl)
         new_stack.create()
+
+    @process.asynchronous
+    def update_stack(self, stack_name, tmpl):
+        tmpl.store()
+
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.update(tmpl)
