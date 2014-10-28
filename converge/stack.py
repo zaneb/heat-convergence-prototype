@@ -32,6 +32,14 @@ class Stack(object):
         return cls(s.name, template.Template.load(s.tmpl_key), s.deps,
                    key=s.key)
 
+    @classmethod
+    def load_by_name(cls, stack_name):
+        candidates = list(stacks.find(name=stack_name))
+        if not candidates:
+            raise KeyError('Stack "%s" not found' % stack_name)
+        assert len(candidates) == 1, 'Multiple stacks "%s" found' % stack_name
+        return cls.load(candidates[0])
+
     def store(self):
         if self.key is None:
             self.key = stacks.create(**self.data)
