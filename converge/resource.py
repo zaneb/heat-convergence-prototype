@@ -107,9 +107,14 @@ class Resource(object):
                                                  self.props_data))
         self.store()
 
+    def clear_requirers(self, gone_requirers):
+        self.requirers -= set(gone_requirers)
+        self.store()
+
     def delete(self):
         reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
         resources.delete(self.key)
+        self.key = None

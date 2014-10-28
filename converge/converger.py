@@ -25,7 +25,10 @@ class Converger(process.MessageProcessor):
         else:
             rsrc.update(template_key, data)
 
-    def check_resource_cleanup(self, rsrc, template_key):
+    def check_resource_cleanup(self, rsrc, template_key, data):
+        rsrc.clear_requirers(rsrc_key for rsrc_key, key in data.items()
+                                    if key is None)
+
         if rsrc.name not in rsrc.stack.tmpl.resources:
             rsrc.delete()
 
@@ -50,7 +53,7 @@ class Converger(process.MessageProcessor):
             self.propagate_check_resource(resource_key,
                                           template_key,
                                           rsrc.requirers | {resource_key},
-                                          resource_key, None, False)
+                                          resource_key, rsrc.key, False)
 
             for req in rsrc.requirers:
                 defn = tmpl.resources.get(req.name)
@@ -61,7 +64,7 @@ class Converger(process.MessageProcessor):
                                                   rsrc.name,
                                                   input_data, True)
         else:
-            self.check_resource_cleanup(rsrc, template_key)
+            self.check_resource_cleanup(rsrc, template_key, data)
 
             for req in rsrc.requirements:
                 # Note that this is pretty inefficient, since it requires each
@@ -75,7 +78,7 @@ class Converger(process.MessageProcessor):
                 self.propagate_check_resource(req_graph_key,
                                               template_key,
                                               req_rsrc.requirers,
-                                              resource_key, None, False)
+                                              resource_key, rsrc.key, False)
 
     def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender, sender_data, forward):
