@@ -49,32 +49,6 @@ class Stack(object):
     def dependencies(self):
         return dependencies.Dependencies(self.data['deps'])
 
-    def create(self):
-        self.store()
-
-        logger.info('[%s(%d)] Created' % (self.data['name'], self.key))
-
-        definitions = self.tmpl.resources
-        deps = self.tmpl.dependencies()
-        logger.debug('[%s(%d)] Dependencies: %s' % (self.data['name'],
-                                                    self.key, deps.graph()))
-
-        def store_resource(rsrc_name):
-            rsrc = resource.Resource(rsrc_name, self, definitions[rsrc_name])
-            rsrc.store()
-            return rsrc
-
-        resources = {name: store_resource(name) for name in deps}
-
-        rsrc_deps = deps.translate(lambda rname: resources[rname].graph_key())
-        self.data['deps'] += tuple(rsrc_deps.graph().edges())
-        self.store()
-
-        from . import processes
-        for rsrc_name in deps.leaves():
-            processes.converger.check_resource(resources[rsrc_name].key,
-                                               self.tmpl.key)
-
     def _calc_dependencies(self, tmpl_deps, resources):
         def make_graph_key(rsrc_name):
             return resources[rsrc_name].graph_key()
@@ -102,12 +76,20 @@ class Stack(object):
 
         return deps
 
+    def create(self):
+        self.store()
+
+        logger.info('[%s(%d)] Created' % (self.data['name'], self.key))
+        self._create_or_update()
+
     def update(self, tmpl):
         old_tmpl, self.tmpl = self.tmpl, tmpl
         self.data['tmpl_key'] = tmpl.key
 
         logger.info('[%s(%d)] Updating...' % (self.data['name'], self.key))
+        self._create_or_update()
 
+    def _create_or_update(self):
         current_graph = self.dependencies().graph()
         rsrcs = {r.name: r for r in resource.Resource.load_all_from_stack(self)
                            if r.graph_key() in current_graph}
