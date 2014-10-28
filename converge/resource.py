@@ -59,5 +59,7 @@ class Resource(object):
         self.store()
 
     def delete(self):
-        logger.info('[%s(%d)] Deleted' % (self.name, self.key))
+        logger.info('[%s(%d)] Deleted %s' % (self.name,
+                                             self.key,
+                                             self.physical_resource_id))
         resources.delete(self.key)
