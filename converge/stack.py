@@ -89,4 +89,4 @@ class Stack(object):
         from . import processes
         for rsrc_name in tmpl_deps.leaves():
             processes.converger.check_resource(key(rsrc_name), self.tmpl.key,
-                                               {})
+                                               {}, True)
