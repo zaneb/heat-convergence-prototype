@@ -26,7 +26,8 @@ class Converger(process.MessageProcessor):
             rsrc.update(template_key, data)
 
     def check_resource_cleanup(self, rsrc, template_key):
-        pass
+        if rsrc.name not in rsrc.stack.tmpl.resources:
+            rsrc.delete()
 
     @process.asynchronous
     def check_resource(self, resource_key, template_key, data, forward):

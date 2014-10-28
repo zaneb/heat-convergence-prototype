@@ -68,6 +68,13 @@ class Stack(object):
                 if not was_fresh(rsrc) or rsrc.name not in current_resources:
                     yield resource.GraphKey(rsrc.name, rsrc.key), False
 
+    def delete(self):
+        self.tmpl = template.Template()
+        self.data['tmpl_key'] = None
+
+        logger.info('[%s(%d)] Deleting...' % (self.data['name'], self.key))
+        self._create_or_update()
+
     def _create_or_update(self, current_tmpl_key=None):
         self.store()
 
