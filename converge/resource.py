@@ -21,14 +21,23 @@ class Resource(object):
         self.physical_resource_id = phys_id
 
     @classmethod
-    def load(cls, key):
-        from . import stack
-
+    def _load_from_store(cls, key, get_stack):
         loaded = resources.read(key)
-        return cls(loaded.name, stack.Stack.load(loaded.stack_key),
+        return cls(loaded.name, get_stack(loaded.stack_key),
                    None,
                    loaded.phys_id,
                    loaded.key)
+
+    @classmethod
+    def load(cls, key):
+        from . import stack
+
+        return cls._load_from_store(key, stack.Stack.load)
+
+    @classmethod
+    def load_all_from_stack(cls, stack):
+        stored = resources.find(stack_key=stack.key)
+        return (cls._load_from_store(key, lambda sk: stack) for key in stored)
 
     def store(self):
         data = {
