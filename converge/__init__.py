@@ -12,20 +12,36 @@ def setup_log(logger):
     logger.setLevel(logging.DEBUG)
 
 
-def main():
+def scenario_globals(procs):
+    from . import template
+
+    return {
+        'Template': template.Template,
+        'RsrcDef': template.RsrcDef,
+        'GetRes': template.GetRes,
+        'GetAtt': template.GetAtt,
+
+        'engine': procs.engine,
+        'converger': procs.converger,
+    }
+
+
+def main(scenarios_dir='scenarios'):
     if not logging.root.handlers:
         setup_log(logging.root)
 
+    logger = logging.getLogger(__name__)
+
+
     from . import processes
-    from . import template
+    from .framework import datastore
+    from .framework import scenario
 
-    example_template = template.Template({
-        'A': template.RsrcDef({}, []),
-        'B': template.RsrcDef({}, []),
-        'C': template.RsrcDef({}, ['A', 'B']),
-        'D': template.RsrcDef({'c': template.GetRes('C')}, []),
-        'E': template.RsrcDef({'ca': template.GetAtt('C', 'a')}, []),
-    })
-    processes.engine.create_stack('foo', example_template)
-
-    processes.event_loop()
+    for runner in scenario.Scenario.load_all(scenarios_dir):
+        try:
+            procs = processes.Processes()
+            runner(procs.event_loop, **scenario_globals(procs))
+        except Exception as exc:
+            logger.exception('Exception in scenario "%s"', runner.name)
+        finally:
+            datastore.Datastore.clear_all()
