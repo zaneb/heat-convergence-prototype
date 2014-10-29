@@ -4,15 +4,33 @@ import itertools
 import logging
 
 
+__all__ = ['Datastore']
+
 logger = logging.getLogger('store')
+
+_datastores = set([])
 
 
 class Datastore(object):
+
+    def __new__(cls, *args):
+        ds = super(Datastore, cls).__new__(cls)
+        _datastores.add(ds)
+        return ds
+
     def __init__(self, name, *fields):
         self.name = name
         self._store = {}
         self.ids = itertools.count()
         self.DataType = collections.namedtuple(name, fields)
+
+    @staticmethod
+    def clear_all():
+        for ds in _datastores:
+            ds.clear()
+
+    def clear(self):
+        self._store = {}
 
     def find(self, **kwargs):
         for key, row in self._store.items():
