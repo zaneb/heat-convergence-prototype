@@ -12,10 +12,12 @@ def setup_log(logger):
     logger.setLevel(logging.DEBUG)
 
 
-def scenario_globals(procs):
+def scenario_globals(procs, testcase=None):
     from . import template
 
     return {
+        'test': procs.engine.testproxy(testcase),
+
         'Template': template.Template,
         'RsrcDef': template.RsrcDef,
         'GetRes': template.GetRes,
@@ -31,7 +33,6 @@ def main(scenarios_dir='scenarios'):
         setup_log(logging.root)
 
     logger = logging.getLogger(__name__)
-
 
     from . import processes
     from .framework import datastore

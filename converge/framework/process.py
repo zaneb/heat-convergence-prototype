@@ -56,6 +56,9 @@ class MessageProcessor(object):
         method(message.data)
         return True
 
+    def testproxy(self, testcase=None):
+        return TestProxy(self, testcase)
+
     @asynchronous
     def noop(self, count=1):
         '''
@@ -65,3 +68,56 @@ class MessageProcessor(object):
         if count > 1:
             self.queue.send_priority('noop',
                                      self.noop.MessageData(count - 1))
+
+    @asynchronous
+    def execute_func(self, func):
+        '''
+        Insert a function call in the message queue.
+
+        The function takes no arguments, so use functools.partial to curry the
+        arguments before passing it here.
+        '''
+        func()
+
+
+class TestProxy(object):
+    def __init__(self, msg_processor, testcase=None):
+        self.msg_processor = msg_processor
+        self.testcase = testcase
+        self.logger = logging.getLogger('testproxy')
+
+    @staticmethod
+    def __format_args(args, kwargs):
+        for a in args:
+            yield repr(a)
+        for kw, a in kwargs.items():
+            yield '%s=%s' % (kw, repr(a))
+
+    def _log_assertion(self, func_name, *args, **kwargs):
+        self.logger.warning('Ignoring %s(%s)',
+                            func_name,
+                            ', '.join(TestProxy.__format_args(args, kwargs)))
+
+    def __getattr__(self, name):
+        if name.startswith('assert'):
+            def handler(*args, **kwargs):
+                if self.testcase is not None:
+                    handler = getattr(self.testcase, name)
+                    wrappee = handler
+                else:
+                    handler = functools.partial(self._log_assertion, name)
+                    wrappee = self._log_assertion
+
+                @functools.wraps(wrappee)
+                def do_assert():
+                    try:
+                        handler(*args, **kwargs)
+                    except AssertionError as exc:
+                        self.logger.exception('AssertionError: %s', exc)
+                        raise
+
+                self.msg_processor.execute_func(do_assert)
+
+            return handler
+        else:
+            raise AttributeError(name)
