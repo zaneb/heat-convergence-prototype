@@ -94,6 +94,19 @@ class Resource(object):
                                                  self.props_data))
         self.store()
 
+    def update(self, template_key, resource_data):
+        new_props_data = self.defn.resolved_props(resource_data)
+
+        self.template_key = template_key
+        self.requirements = [d.key for d in resource_data.values()]
+        self.props_data = new_props_data
+        reality.reality.update_resource(self.physical_resource_id,
+                                        self.props_data)
+        logger.info('[%s(%d)] Properties: %s' % (self.name,
+                                                 self.key,
+                                                 self.props_data))
+        self.store()
+
     def delete(self):
         reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,

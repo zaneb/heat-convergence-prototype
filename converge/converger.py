@@ -22,6 +22,8 @@ class Converger(process.MessageProcessor):
 
         if rsrc.physical_resource_id is None:
             rsrc.create(template_key, data)
+        else:
+            rsrc.update(template_key, data)
 
     def check_resource_cleanup(self, rsrc, template_key):
         pass
