@@ -30,6 +30,8 @@ class Converger(process.MessageProcessor):
 
         if rsrc.physical_resource_id is None:
             rsrc.create(res_ids, res_attrs)
+        else:
+            rsrc.update(res_ids, res_attrs)
 
         return True
 

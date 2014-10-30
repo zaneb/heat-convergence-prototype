@@ -79,6 +79,16 @@ class Resource(object):
                                                  self.props_data))
         self.store()
 
+    def update(self, resource_ids, resource_attrs):
+        new_props_data = self.defn.resolved_props(resource_ids,
+                                                  resource_attrs)
+
+        self.props_data = new_props_data
+        logger.info('[%s(%d)] Properties: %s' % (self.name,
+                                                 self.key,
+                                                 self.props_data))
+        self.store()
+
     def delete(self):
         logger.info('[%s(%d)] Deleted %s' % (self.name,
                                              self.key,
