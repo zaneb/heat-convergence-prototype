@@ -1,7 +1,7 @@
 example_template = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
-    'C': RsrcDef({}, ['A', 'B']),
+    'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
     'D': RsrcDef({'c': GetRes('C')}, []),
     'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
 })
