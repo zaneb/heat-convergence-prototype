@@ -18,6 +18,7 @@ class Converger(process.MessageProcessor):
         super(Converger, self).__init__('converger')
 
     def check_resource_update(self, rsrc, template_key, data):
+        rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
 
         if rsrc.physical_resource_id is None:
             rsrc.create(template_key, data)
@@ -40,7 +41,8 @@ class Converger(process.MessageProcessor):
             tmpl_deps = tmpl.dependencies()
             graph = tmpl_deps.graph()
 
-            input_data = resource.InputData(rsrc.key)
+            input_data = resource.InputData(rsrc.key,
+                                            rsrc.refid(), rsrc.attributes())
 
             self.propagate_check_resource(resource_key,
                                           template_key,

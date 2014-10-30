@@ -8,17 +8,17 @@ from . import reality
 logger = logging.getLogger('rsrcs')
 
 GraphKey = collections.namedtuple('GraphKey', ['name', 'key'])
-InputData = collections.namedtuple('InputData', ['key'])
+InputData = collections.namedtuple('InputData', ['key', 'refid', 'attrs'])
 
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
                                 'requirers', 'requirements',
-                                'phys_id')
+                                'props_data', 'phys_id')
 
 
 class Resource(object):
     def __init__(self, name, stack, defn, template_key=None,
-                 requirers=[], requirements=[], phys_id=None,
+                 requirers=[], requirements=[], props_data=None, phys_id=None,
                  key=None):
         self.key = key
         self.name = name
@@ -27,6 +27,7 @@ class Resource(object):
         self.template_key = template_key
         self.requirers = requirers
         self.requirements = requirements
+        self.props_data = props_data
         self.physical_resource_id = phys_id
 
     @classmethod
@@ -37,6 +38,7 @@ class Resource(object):
                    loaded.template_key,
                    loaded.requirers,
                    loaded.requirements,
+                   loaded.props_data,
                    loaded.phys_id,
                    loaded.key)
 
@@ -61,6 +63,7 @@ class Resource(object):
             'template_key': self.template_key,
             'requirers': self.requirers,
             'requirements': self.requirements,
+            'props_data': self.props_data,
             'phys_id': self.physical_resource_id,
         }
 
@@ -69,14 +72,26 @@ class Resource(object):
         else:
             resources.update(self.key, **data)
 
+    def refid(self):
+        return self.physical_resource_id
+
+    def attributes(self):
+        # Just mirror properties -> attributes for test purposes
+        return self.props_data
+
     def create(self, template_key, resource_data):
         self.template_key = template_key
         self.requirements = [d.key for d in resource_data.values()]
-        self.physical_resource_id = reality.reality.create_resource(self.name,
-                                                                    {})
+        self.props_data = self.defn.resolved_props(resource_data)
+
+        uuid = reality.reality.create_resource(self.name, self.props_data)
+        self.physical_resource_id = uuid
         logger.info('[%s(%d)] Created %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
+        logger.info('[%s(%d)] Properties: %s' % (self.name,
+                                                 self.key,
+                                                 self.props_data))
         self.store()
 
     def delete(self):

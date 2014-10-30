@@ -10,7 +10,7 @@ example_template = Template({
 })
 engine.create_stack('foo', example_template)
 engine.noop(5)
-engine.call(check_results, 5)
+engine.call(verify, example_template)
 
 example_template2 = Template({
     'A': RsrcDef({}, []),
@@ -22,4 +22,4 @@ example_template2 = Template({
 })
 engine.update_stack('foo', example_template2)
 engine.noop(11)
-engine.call(check_results, 6)
+engine.call(verify, example_template2)

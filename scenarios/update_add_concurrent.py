@@ -1,4 +1,4 @@
-def check_results(expected_count):
+def check_resource_count(expected_count):
     test.assertEqual(expected_count, len(reality.all_resources()))
 
 example_template = Template({
@@ -20,6 +20,6 @@ example_template2 = Template({
     'F': RsrcDef({}, ['D', 'E']),
 })
 engine.update_stack('foo', example_template2)
-engine.call(check_results, 3)
+engine.call(check_resource_count, 3)
 engine.noop(11)
-engine.call(check_results, 6)
+engine.call(verify, example_template2)
