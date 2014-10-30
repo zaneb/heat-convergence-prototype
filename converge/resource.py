@@ -10,16 +10,18 @@ logger = logging.getLogger('rsrcs')
 GraphKey = collections.namedtuple('GraphKey', ['name', 'key', 'forward'])
 
 resources = datastore.Datastore('Resource',
-                                'key', 'stack_key', 'name', 'phys_id')
+                                'key', 'stack_key', 'name',
+                                'props_data', 'phys_id')
 
 
 class Resource(object):
-    def __init__(self, name, stack, defn, phys_id=None,
+    def __init__(self, name, stack, defn, props_data=None, phys_id=None,
                  key=None):
         self.key = key
         self.name = name
         self.stack = stack
         self.defn = defn
+        self.props_data = props_data
         self.physical_resource_id = phys_id
 
     @classmethod
@@ -27,6 +29,7 @@ class Resource(object):
         loaded = resources.read(key)
         return cls(loaded.name, get_stack(loaded.stack_key),
                    None,
+                   loaded.props_data,
                    loaded.phys_id,
                    loaded.key)
 
@@ -49,6 +52,7 @@ class Resource(object):
             'name': self.name,
             'stack_key': self.stack.key,
             'phys_id': self.physical_resource_id,
+            'props_data': self.props_data,
         }
 
         if self.key is None:
@@ -56,11 +60,23 @@ class Resource(object):
         else:
             resources.update(self.key, **data)
 
-    def create(self):
+    def refid(self):
+        return self.physical_resource_id
+
+    def attributes(self):
+        # Just mirror properties -> attributes for test purposes
+        return self.props_data
+
+    def create(self, resource_ids, resource_attrs):
         self.physical_resource_id = str(uuid.uuid4())
+        self.props_data = self.defn.resolved_props(resource_ids,
+                                                   resource_attrs)
         logger.info('[%s(%d)] Created %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
+        logger.info('[%s(%d)] Properties: %s' % (self.name,
+                                                 self.key,
+                                                 self.props_data))
         self.store()
 
     def delete(self):

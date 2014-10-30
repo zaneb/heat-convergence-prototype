@@ -18,8 +18,18 @@ class Converger(process.MessageProcessor):
             # Out of date
             return False
 
+        rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
+
+        # TODO: push instead of querying this data. Clearly this is
+        # hideously inefficient.
+        graph = rsrc.stack.dependencies().graph()
+        resources = filter(lambda r: r.graph_key() in graph,
+                           resource.Resource.load_all_from_stack(rsrc.stack))
+        res_ids = {r.name: r.refid() for r in resources}
+        res_attrs = {r.name: r.attributes() for r in resources}
+
         if rsrc.physical_resource_id is None:
-            rsrc.create()
+            rsrc.create(res_ids, res_attrs)
 
         return True
 
