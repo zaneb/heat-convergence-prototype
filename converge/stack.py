@@ -133,3 +133,30 @@ class Stack(object):
             processes.converger.check_resource(graph_key.key,
                                                self.tmpl.key,
                                                graph_key.forward)
+
+    def create_replacement(self, rsrc_name, rsrc_defn, prev_rsrc_key):
+        rsrc = resource.Resource(rsrc_name, self, rsrc_defn)
+        rsrc.store()
+
+        def rewrite_deps(edges):
+            for src, targ in edges:
+                if src.key == prev_rsrc_key and src.forward:
+                    yield rsrc.graph_key(), targ
+
+                if targ.key == prev_rsrc_key and targ.forward:
+                    # This is wrong, because we sometimes need to update the
+                    # src to require the new targ. Sometimes we don't,
+                    # however - when the src itself will be replaced. But we
+                    # won't make a decision on that until The Future.
+                    yield src, targ
+                else:
+                    yield src, targ
+
+        # This part is quite problematic, as it requires us to somehow lock
+        # the stack so we can rewrite the dependency graph at a time when
+        # other resource replacements and/or new template updates may be
+        # trying to do the same.
+        self.data['deps'] = tuple(rewrite_deps(self.data['deps']))
+        self.store()
+
+        return rsrc

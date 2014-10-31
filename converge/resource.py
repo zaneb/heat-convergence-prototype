@@ -14,6 +14,10 @@ resources = datastore.Datastore('Resource',
                                 'props_data', 'phys_id')
 
 
+class UpdateReplace(Exception):
+    pass
+
+
 class Resource(object):
     def __init__(self, name, stack, defn, template_key=None,
                  props_data=None, phys_id=None,
@@ -87,7 +91,14 @@ class Resource(object):
     def update(self, template_key, resource_ids, resource_attrs):
         new_props_data = self.defn.resolved_props(resource_ids,
                                                   resource_attrs)
+        for key, val in new_props_data.items():
+            if val != self.props_data[key] and '!' in key:
+                logger.info('[%s(%d)] Needs replacement' % (self.name,
+                                                            self.key))
+                raise UpdateReplace
 
+        logger.info('[%s(%d)] Updating in place' % (self.name,
+                                                    self.key))
         self.template_key = template_key
         self.props_data = new_props_data
         logger.info('[%s(%d)] Properties: %s' % (self.name,

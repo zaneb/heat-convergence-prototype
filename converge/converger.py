@@ -31,7 +31,13 @@ class Converger(process.MessageProcessor):
         if rsrc.physical_resource_id is None:
             rsrc.create(template_key, res_ids, res_attrs)
         else:
-            rsrc.update(template_key, res_ids, res_attrs)
+            try:
+                rsrc.update(template_key, res_ids, res_attrs)
+            except resource.UpdateReplace:
+                replacement = rsrc.stack.create_replacement(rsrc.name,
+                                                            rsrc.defn,
+                                                            rsrc.key)
+                replacement.create(template_key, res_ids, res_attrs)
 
         return True
 
@@ -43,7 +49,13 @@ class Converger(process.MessageProcessor):
 
     @process.asynchronous
     def check_resource(self, resource_key, template_key, forward):
-        rsrc = resource.Resource.load(resource_key)
+        try:
+            rsrc = resource.Resource.load(resource_key)
+        except KeyError:
+            if not forward:
+                return
+            else:
+                raise
 
         if forward:
             do_check = self.check_resource_update
