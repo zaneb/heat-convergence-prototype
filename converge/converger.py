@@ -29,14 +29,14 @@ class Converger(process.MessageProcessor):
         res_attrs = {r.name: r.attributes() for r in resources}
 
         if rsrc.physical_resource_id is None:
-            rsrc.create(res_ids, res_attrs)
+            rsrc.create(template_key, res_ids, res_attrs)
         else:
-            rsrc.update(res_ids, res_attrs)
+            rsrc.update(template_key, res_ids, res_attrs)
 
         return True
 
     def check_resource_cleanup(self, rsrc, template_key):
-        if rsrc.name not in rsrc.stack.tmpl.resources:
+        if rsrc.template_key != template_key:
             rsrc.delete()
 
         return True
