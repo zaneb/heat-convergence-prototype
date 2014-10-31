@@ -29,7 +29,7 @@ class Converger(process.MessageProcessor):
         rsrc.clear_requirers(rsrc_key for rsrc_key, key in data.items()
                                     if key is None)
 
-        if rsrc.name not in rsrc.stack.tmpl.resources:
+        if rsrc.template_key != template_key:
             rsrc.delete()
 
     @process.asynchronous
@@ -48,7 +48,17 @@ class Converger(process.MessageProcessor):
         cleanup_graph = cleanup_deps.graph()
 
         if forward:
-            self.check_resource_update(rsrc, template_key, data)
+            if rsrc.replaced_by and rsrc.template_key != template_key:
+                return
+
+            try:
+                self.check_resource_update(rsrc, template_key, data)
+            except resource.UpdateReplace:
+                replacement = rsrc.create_replacement(template_key, data)
+                self.check_resource(resource.GraphKey(replacement.name,
+                                                      replacement.key),
+                                    template_key, data, cleanup_deps, True)
+                return
 
             tmpl_deps = tmpl.dependencies()
             graph = tmpl_deps.graph()
@@ -56,13 +66,20 @@ class Converger(process.MessageProcessor):
             input_data = resource.InputData(rsrc.key,
                                             rsrc.refid(), rsrc.attributes())
 
-            if resource_key in cleanup_graph:
-                cleanup_requirers = (set(cleanup_graph[resource_key]) |
-                                        {resource_key})
-                self.propagate_check_resource(resource_key,
+            cleanup_node = resource.GraphKey(rsrc.name, rsrc.replaces)
+            if rsrc.replaces is not None and cleanup_node in cleanup_graph:
+                cleanup_node_key = cleanup_node.key
+            else:
+                cleanup_node = resource_key
+                cleanup_node_key = rsrc.key
+
+            if cleanup_node in cleanup_graph:
+                cleanup_requirers = (set(cleanup_graph[cleanup_node]) |
+                                        {cleanup_node})
+                self.propagate_check_resource(cleanup_node,
                                               template_key,
                                               cleanup_requirers,
-                                              resource_key, rsrc.key,
+                                              cleanup_node, cleanup_node_key,
                                               cleanup_deps, False)
 
             for req in rsrc.requirers:

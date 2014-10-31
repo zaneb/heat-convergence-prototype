@@ -13,12 +13,18 @@ InputData = collections.namedtuple('InputData', ['key', 'refid', 'attrs'])
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
                                 'requirers', 'requirements',
+                                'replaces', 'replaced_by',
                                 'props_data', 'phys_id')
+
+
+class UpdateReplace(Exception):
+    pass
 
 
 class Resource(object):
     def __init__(self, name, stack, defn, template_key=None,
                  requirers=set(), requirements=set(),
+                 replaces=None, replaced_by=None,
                  props_data=None, phys_id=None,
                  key=None):
         self.key = key
@@ -28,6 +34,8 @@ class Resource(object):
         self.template_key = template_key
         self.requirers = requirers
         self.requirements = requirements
+        self.replaces = replaces
+        self.replaced_by = replaced_by
         self.props_data = props_data
         self.physical_resource_id = phys_id
 
@@ -39,6 +47,8 @@ class Resource(object):
                    loaded.template_key,
                    loaded.requirers,
                    loaded.requirements,
+                   loaded.replaces,
+                   loaded.replaced_by,
                    loaded.props_data,
                    loaded.phys_id,
                    loaded.key)
@@ -64,6 +74,8 @@ class Resource(object):
             'template_key': self.template_key,
             'requirers': self.requirers,
             'requirements': self.requirements,
+            'replaces': self.replaces,
+            'replaced_by': self.replaced_by,
             'props_data': self.props_data,
             'phys_id': self.physical_resource_id,
         }
@@ -99,6 +111,14 @@ class Resource(object):
     def update(self, template_key, resource_data):
         new_props_data = self.defn.resolved_props(resource_data)
 
+        for key, val in new_props_data.items():
+            if val != self.props_data[key] and '!' in key:
+                logger.info('[%s(%d)] Needs replacement' % (self.name,
+                                                            self.key))
+                raise UpdateReplace
+
+        logger.info('[%s(%d)] Updating in place' % (self.name,
+                                                    self.key))
         self.template_key = template_key
         self.requirements = set(GraphKey(k, d.key)
                                     for k, d in resource_data.items())
@@ -109,6 +129,17 @@ class Resource(object):
                                                  self.key,
                                                  self.props_data))
         self.store()
+
+    def create_replacement(self, template_key, resource_data):
+        rsrc = Resource(self.name, self.stack,
+                        self.defn, template_key,
+                        requirers=self.requirers, replaces=self.key)
+        rsrc.store()
+
+        self.replaced_by = rsrc.key
+        self.store()
+
+        return rsrc
 
     def clear_requirers(self, gone_requirers):
         self.requirers -= set(gone_requirers)

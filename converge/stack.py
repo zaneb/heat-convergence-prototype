@@ -80,6 +80,8 @@ class Stack(object):
                 for requirement in rsrc.requirements:
                     if requirement in existing_resources:
                         yield requirement, key
+                if rsrc.replaces in existing_resources:
+                    yield resource.GraphKey(rsrc.name, rsrc.replaces), key
 
         return dependencies.Dependencies(edges())
 
