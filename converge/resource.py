@@ -8,17 +8,19 @@ logger = logging.getLogger('rsrcs')
 
 
 resources = datastore.Datastore('Resource',
-                                'key', 'stack_key', 'name', 'requirers',
-                                'phys_id')
+                                'key', 'stack_key', 'name', 'template_key',
+                                'requirers', 'phys_id')
 
 
 class Resource(object):
-    def __init__(self, name, stack, defn, requirers=[], phys_id=None,
+    def __init__(self, name, stack, defn, template_key=None,
+                 requirers=[], phys_id=None,
                  key=None):
         self.key = key
         self.name = name
         self.stack = stack
         self.defn = defn
+        self.template_key = template_key
         self.requirers = requirers
         self.physical_resource_id = phys_id
 
@@ -27,6 +29,7 @@ class Resource(object):
         loaded = resources.read(key)
         return cls(loaded.name, get_stack(loaded.stack_key),
                    None,
+                   loaded.template_key,
                    loaded.requirers,
                    loaded.phys_id,
                    loaded.key)
@@ -46,6 +49,7 @@ class Resource(object):
         data = {
             'name': self.name,
             'stack_key': self.stack.key,
+            'template_key': self.template_key,
             'requirers': self.requirers,
             'phys_id': self.physical_resource_id,
         }
@@ -55,7 +59,8 @@ class Resource(object):
         else:
             resources.update(self.key, **data)
 
-    def create(self):
+    def create(self, template_key):
+        self.template_key = template_key
         self.physical_resource_id = reality.reality.create_resource(self.name,
                                                                     {})
         logger.info('[%s(%d)] Created %s' % (self.name,

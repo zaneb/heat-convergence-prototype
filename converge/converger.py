@@ -27,7 +27,7 @@ class Converger(process.MessageProcessor):
             return
 
         if rsrc.physical_resource_id is None:
-            rsrc.create()
+            rsrc.create(template_key)
 
         for req in rsrc.requirers:
             req_rsrc = resource.Resource.load(req)
