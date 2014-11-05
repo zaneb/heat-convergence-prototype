@@ -20,8 +20,7 @@ class Datastore(object):
 
     def __init__(self, name, *fields):
         self.name = name
-        self._store = {}
-        self.ids = itertools.count()
+        self.clear()
         self.DataType = collections.namedtuple(name, fields)
 
     @staticmethod
@@ -31,6 +30,7 @@ class Datastore(object):
 
     def clear(self):
         self._store = {}
+        self.ids = itertools.count()
 
     def find(self, **kwargs):
         for key, row in self._store.items():
