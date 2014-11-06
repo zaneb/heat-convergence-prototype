@@ -20,6 +20,7 @@ class Converger(process.MessageProcessor):
     @process.asynchronous
     def check_resource(self, resource_key, template_key):
         rsrc = resource.Resource.load(resource_key)
+        tmpl = template.Template.load(template_key)
 
         if rsrc.stack.tmpl.key != template_key:
             logger.debug('[%s] Traversal cancelled; stopping.', template_key)
@@ -28,12 +29,11 @@ class Converger(process.MessageProcessor):
         if rsrc.physical_resource_id is None:
             rsrc.create()
 
-        deps = rsrc.stack.dependencies()
-        graph = deps.graph()
-
-        for req in deps.required_by(resource_key):
+        for req in rsrc.requirers:
+            req_rsrc = resource.Resource.load(req)
+            predecessors = tmpl.resources[req_rsrc.name].dependency_names()
             self.propagate_check_resource(req, template_key,
-                                          set(graph[req]), rsrc.key)
+                                          set(predecessors), rsrc.name)
 
     def propagate_check_resource(self, next_resource_key, template_key,
                                  predecessors, sender):
