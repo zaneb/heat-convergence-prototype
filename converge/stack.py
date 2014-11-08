@@ -2,6 +2,7 @@ import logging
 
 from .framework import datastore
 
+from . import dependencies
 from . import resource
 from . import template
 
@@ -55,6 +56,18 @@ class Stack(object):
         logger.info('[%s(%d)] Updating...' % (self.data['name'], self.key))
         self._create_or_update(old_tmpl.key)
 
+    @staticmethod
+    def _initial_nodes(tmpl_deps, current_resources,
+                       existing_resources, was_fresh):
+        for rsrc_name in tmpl_deps.leaves():
+            yield resource.GraphKey(rsrc_name,
+                                    current_resources[rsrc_name].key), True
+
+        for rsrc in existing_resources:
+            if not rsrc.requirers:
+                if not was_fresh(rsrc) or rsrc.name not in current_resources:
+                    yield resource.GraphKey(rsrc.name, rsrc.key), False
+
     def _create_or_update(self, current_tmpl_key=None):
         self.store()
 
@@ -64,8 +77,12 @@ class Stack(object):
                                                     self.key,
                                                     tmpl_deps.graph()))
 
-        rsrcs = {r.name: r for r in resource.Resource.load_all_from_stack(self)
-                           if r.template_key == current_tmpl_key}
+        def is_fresh(rsrc):
+            return rsrc.template_key == current_tmpl_key
+
+        ext_rsrcs = set(resource.Resource.load_all_from_stack(self))
+        rsrcs = {r.name: r for r in ext_rsrcs if is_fresh(r) and
+                                                 r.name in definitions}
 
         def key(r):
             return resource.GraphKey(r, rsrcs[r].key)
@@ -87,6 +104,7 @@ class Stack(object):
                 rsrc.store()
 
         from . import processes
-        for rsrc_name in tmpl_deps.leaves():
-            processes.converger.check_resource(key(rsrc_name), self.tmpl.key,
-                                               {}, True)
+        for graph_key, forward in self._initial_nodes(tmpl_deps, rsrcs,
+                                                      ext_rsrcs, is_fresh):
+            processes.converger.check_resource(graph_key, self.tmpl.key,
+                                               {}, forward)
