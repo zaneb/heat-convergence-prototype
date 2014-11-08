@@ -11,6 +11,12 @@ logger = logging.getLogger('store')
 _datastores = set([])
 
 
+def get_datastore(name):
+    for ds in _datastores:
+        if ds.name == name:
+            return ds
+
+
 class Datastore(object):
 
     def __new__(cls, *args):
@@ -62,3 +68,7 @@ class Datastore(object):
             key = key[0]
         logger.debug('[%s] Deleting %s' % (self.name, key))
         del self._store[key]
+
+    @property
+    def keys(self):
+        return self._store.keys()

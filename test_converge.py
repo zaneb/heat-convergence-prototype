@@ -59,5 +59,5 @@ class ScenarioTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #converge.setup_log(logging.root)
+    converge.setup_log(logging.root)
     unittest.main()

@@ -6,3 +6,6 @@ example_template = Template({
     'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
 })
 engine.create_stack('foo', example_template)
+engine.noop(12)
+tpl_ds = get_datastore("Template")
+res_ds = get_datastore("Resource")

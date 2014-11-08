@@ -14,6 +14,7 @@ def setup_log(logger):
 
 def scenario_globals(procs, testcase=None):
     from . import template
+    from .framework import datastore
 
     return {
         'test': procs.engine.testproxy(testcase),
@@ -25,6 +26,7 @@ def scenario_globals(procs, testcase=None):
 
         'engine': procs.engine,
         'converger': procs.converger,
+        'get_datastore': datastore.get_datastore,
     }
 
 

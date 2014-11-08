@@ -17,3 +17,4 @@ example_template2 = Template({
     'F': RsrcDef({}, ['D', 'E']),
 })
 engine.update_stack('foo', example_template2)
+from ipdb import set_trace; set_trace()
