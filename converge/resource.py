@@ -8,15 +8,17 @@ from . import reality
 logger = logging.getLogger('rsrcs')
 
 GraphKey = collections.namedtuple('GraphKey', ['name', 'key'])
+InputData = collections.namedtuple('InputData', ['key'])
 
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
-                                'requirers', 'phys_id')
+                                'requirers', 'requirements',
+                                'phys_id')
 
 
 class Resource(object):
     def __init__(self, name, stack, defn, template_key=None,
-                 requirers=[], phys_id=None,
+                 requirers=[], requirements=[], phys_id=None,
                  key=None):
         self.key = key
         self.name = name
@@ -24,6 +26,7 @@ class Resource(object):
         self.defn = defn
         self.template_key = template_key
         self.requirers = requirers
+        self.requirements = requirements
         self.physical_resource_id = phys_id
 
     @classmethod
@@ -33,6 +36,7 @@ class Resource(object):
                    None,
                    loaded.template_key,
                    loaded.requirers,
+                   loaded.requirements,
                    loaded.phys_id,
                    loaded.key)
 
@@ -56,6 +60,7 @@ class Resource(object):
             'stack_key': self.stack.key,
             'template_key': self.template_key,
             'requirers': self.requirers,
+            'requirements': self.requirements,
             'phys_id': self.physical_resource_id,
         }
 
@@ -64,8 +69,9 @@ class Resource(object):
         else:
             resources.update(self.key, **data)
 
-    def create(self, template_key):
+    def create(self, template_key, resource_data):
         self.template_key = template_key
+        self.requirements = [d.key for d in resource_data.values()]
         self.physical_resource_id = reality.reality.create_resource(self.name,
                                                                     {})
         logger.info('[%s(%d)] Created %s' % (self.name,

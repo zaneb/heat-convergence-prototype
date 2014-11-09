@@ -18,7 +18,7 @@ class Converger(process.MessageProcessor):
         super(Converger, self).__init__('converger')
 
     @process.asynchronous
-    def check_resource(self, resource_key, template_key):
+    def check_resource(self, resource_key, template_key, data):
         rsrc = resource.Resource.load(resource_key.key)
         tmpl = template.Template.load(template_key)
 
@@ -27,18 +27,22 @@ class Converger(process.MessageProcessor):
             return
 
         if rsrc.physical_resource_id is None:
-            rsrc.create(template_key)
+            rsrc.create(template_key, data)
+
+        input_data = resource.InputData(rsrc.key)
 
         for req in rsrc.requirers:
             predecessors = tmpl.resources[req.name].dependency_names()
             self.propagate_check_resource(req, template_key,
-                                          set(predecessors), rsrc.name)
+                                          set(predecessors),
+                                          rsrc.name, input_data)
 
     def propagate_check_resource(self, next_res_graph_key, template_key,
-                                 predecessors, sender):
+                                 predecessors, sender, sender_data):
         if len(predecessors) == 1:
             # Cut to the chase
-            self.check_resource(next_res_graph_key, template_key)
+            self.check_resource(next_res_graph_key, template_key,
+                                {sender: sender_data})
             return
 
         key = '%s-%s' % (next_res_graph_key.key, template_key)
@@ -46,12 +50,14 @@ class Converger(process.MessageProcessor):
             sync_point = sync_points.read(key)
         except KeyError:
             sync_points.create_with_key(key, predecessors=predecessors,
-                                        satisfied=[sender])
+                                        satisfied={sender: sender_data})
         else:
-            satisfied = sync_point.satisfied + [sender]
+            satisfied = dict(sync_point.satisfied)
+            satisfied[sender] = sender_data
             predecessors |= sync_point.predecessors
             if set(satisfied).issuperset(predecessors):
-                self.check_resource(next_res_graph_key, template_key)
+                self.check_resource(next_res_graph_key, template_key,
+                                    satisfied)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
