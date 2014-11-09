@@ -27,7 +27,8 @@ def scenario_globals(procs, testcase=None):
         'engine': procs.engine,
         'converger': procs.converger,
         'get_datastore': datastore.get_datastore,
-    }
+        '__name__': __name__,
+        }
 
 
 def main(scenarios_dir='scenarios'):

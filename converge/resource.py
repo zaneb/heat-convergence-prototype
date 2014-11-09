@@ -76,7 +76,7 @@ class Resource(object):
         return self.props_data
 
     def create(self, template_key, resource_ids, resource_attrs):
-        self.physical_resource_id = str(uuid.uuid4())
+        self.physical_resource_id = self.name + "_phys_id"  # predictable phys_id for test purposes
         self.template_key = template_key
         self.props_data = self.defn.resolved_props(resource_ids,
                                                    resource_attrs)
