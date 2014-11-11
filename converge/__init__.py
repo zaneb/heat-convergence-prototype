@@ -1,3 +1,7 @@
+'''
+An OpenStack Heat convergence algorithm simulator.
+'''
+
 import logging
 
 
@@ -28,7 +32,24 @@ def scenario_globals(procs, testcase=None):
     }
 
 
-def main(scenarios_dir='scenarios'):
+def cli_options():
+    from optparse import OptionParser
+
+    parser = OptionParser(prog='python -m %s' % __name__,
+                          usage='usage: %prog [options] SCENARIOS',
+                          description=__doc__)
+    parser.add_option('-d', '--scenario-directory', dest='directory',
+                      action='store', default='scenarios', metavar='DIR',
+                      help='Directory to read scenarios from')
+
+    return parser.parse_args()
+
+
+def main(config=None):
+    if config is None:
+        config = cli_options()
+    options, scenario_names = config
+
     if not logging.root.handlers:
         setup_log(logging.root)
 
@@ -38,7 +59,13 @@ def main(scenarios_dir='scenarios'):
     from .framework import datastore
     from .framework import scenario
 
-    for runner in scenario.Scenario.load_all(scenarios_dir):
+    def include_scenario(name):
+        return not scenario_names or name in scenario_names
+
+    for runner in scenario.Scenario.load_all(options.directory):
+        if not include_scenario(runner.name):
+            continue
+
         try:
             procs = processes.Processes()
             runner(procs.event_loop, **scenario_globals(procs))
@@ -46,3 +73,6 @@ def main(scenarios_dir='scenarios'):
             logger.exception('Exception in scenario "%s"', runner.name)
         finally:
             datastore.Datastore.clear_all()
+
+
+__all__ = ['setup_log', 'scenario_globals', 'cli_options', 'main']
