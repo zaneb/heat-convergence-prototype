@@ -33,9 +33,10 @@ def scenario_globals(procs, testcase=None):
 
 
 def cli_options():
+    import sys
     from optparse import OptionParser
 
-    parser = OptionParser(prog='python -m %s' % __name__,
+    parser = OptionParser(prog='%s -m %s' % (sys.executable, __name__),
                           usage='usage: %prog [options] SCENARIOS',
                           description=__doc__)
     parser.add_option('-d', '--scenario-directory', dest='directory',

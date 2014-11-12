@@ -80,11 +80,7 @@ class Node(object):
 
     def __str__(self):
         '''Return a human-readable string representation of the node.'''
-        return unicode(self).encode('utf8')
-
-    def __unicode__(self):
-        '''Return a human-readable string representation of the node.'''
-        return '{%s}' % ', '.join(unicode(n) for n in self)
+        return '{%s}' % ', '.join(str(n) for n in self)
 
     def __repr__(self):
         '''Return a string representation of the node.'''
@@ -138,13 +134,6 @@ class Graph(collections.defaultdict):
         '''Convert the graph to a human-readable string.'''
         pairs = ('%s: %s' % (str(k), str(v)) for k, v in self.items())
         return '{%s}' % ', '.join(pairs)
-
-    def __unicode__(self):
-        '''Convert the graph to a human-readable string.'''
-        pairs = ('%s: %s' % (unicode(k), unicode(v))
-                 for k, v in self.items())
-        text = '{%s}' % ', '.join(pairs)
-        return encodeutils.safe_decode(text)
 
     @staticmethod
     def toposort(graph):
@@ -252,17 +241,10 @@ class Dependencies(object):
         '''
         return str(self._graph)
 
-    def __unicode__(self):
-        '''
-        Return a human-readable string representation of the dependency graph
-        '''
-        return unicode(self._graph)
-
     def __repr__(self):
         '''Return a string representation of the object.'''
         edge_reprs = (repr(e) for e in self._graph.edges())
-        text = 'Dependencies([%s])' % ', '.join(edge_reprs)
-        return encodeutils.safe_encode(text)
+        return 'Dependencies([%s])' % ', '.join(edge_reprs)
 
     def graph(self, reverse=False):
         '''Return a copy of the underlying dependency graph.'''

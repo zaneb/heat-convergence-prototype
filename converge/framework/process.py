@@ -17,7 +17,7 @@ def asynchronous(function):
     run on a future iteration of the event loop.
     '''
     arg_names = inspect.getargspec(function).args
-    MessageData = collections.namedtuple(function.func_name, arg_names[1:])
+    MessageData = collections.namedtuple(function.__name__, arg_names[1:])
 
     @functools.wraps(function)
     def call_or_send(processor, *args, **kwargs):
@@ -26,7 +26,7 @@ def asynchronous(function):
         else:
             data = inspect.getcallargs(function, processor, *args, **kwargs)
             data.pop(arg_names[0])  # lose self
-            return processor.queue.send(function.func_name,
+            return processor.queue.send(function.__name__,
                                         MessageData(**data))
 
     call_or_send.MessageData = MessageData
