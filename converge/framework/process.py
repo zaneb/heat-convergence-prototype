@@ -22,7 +22,12 @@ def asynchronous(function):
     @functools.wraps(function)
     def call_or_send(processor, *args, **kwargs):
         if len(args) == 1 and not kwargs and isinstance(args[0], MessageData):
-            return function(processor, **args[0]._asdict())
+            try:
+                return function(processor, **args[0]._asdict())
+            except Exception as exc:
+                logger.exception('[%s] Exception in "%s": %s',
+                                 processor.name, function.__name__, exc)
+                raise
         else:
             data = inspect.getcallargs(function, processor, *args, **kwargs)
             data.pop(arg_names[0])  # lose self
