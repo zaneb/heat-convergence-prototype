@@ -52,10 +52,13 @@ class Converger(process.MessageProcessor):
                                           resource_key, None, False)
 
             for req in rsrc.requirers:
-                predecessors = tmpl.resources[req.name].dependency_names()
-                self.propagate_check_resource(req, template_key,
-                                              set(graph[req.name]), rsrc.name,
-                                              input_data, True)
+                defn = tmpl.resources.get(req.name)
+                if defn is not None:
+                    predecessors = defn.dependency_names()
+                    self.propagate_check_resource(req, template_key,
+                                                  set(graph[req.name]),
+                                                  rsrc.name,
+                                                  input_data, True)
         else:
             self.check_resource_cleanup(rsrc, template_key)
 
