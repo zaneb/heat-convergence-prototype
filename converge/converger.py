@@ -1,9 +1,13 @@
+import logging
+
 from .framework import datastore
 from .framework import process
 
 from . import resource
 from . import template
 
+
+logger = logging.getLogger('converger')
 
 sync_points = datastore.Datastore('SyncPoint',
                                   'key', 'predecessors', 'satisfied')
@@ -18,7 +22,7 @@ class Converger(process.MessageProcessor):
         rsrc = resource.Resource.load(resource_key)
 
         if rsrc.stack.tmpl.key != template_key:
-            # Out of date
+            logger.debug('[%s] Traversal cancelled; stopping.', template_key)
             return
 
         if rsrc.physical_resource_id is None:
