@@ -68,12 +68,27 @@ class Stack(object):
                 if not was_fresh(rsrc) or rsrc.name not in current_resources:
                     yield resource.GraphKey(rsrc.name, rsrc.key), False
 
+    @staticmethod
+    def _cleanup_deps(existing_resources):
+        def edges():
+            for key, rsrc in existing_resources.items():
+                yield key, None
+                # Note: reversed edges as these are the cleanup dependencies
+                for requirer in rsrc.requirers:
+                    if requirer in existing_resources:
+                        yield key, requirer
+                for requirement in rsrc.requirements:
+                    if requirement in existing_resources:
+                        yield requirement, key
+
+        return dependencies.Dependencies(edges())
+
     def delete(self):
-        self.tmpl = template.Template()
+        old_tmpl, self.tmpl = self.tmpl, template.Template()
         self.data['tmpl_key'] = None
 
         logger.info('[%s(%d)] Deleting...' % (self.data['name'], self.key))
-        self._create_or_update()
+        self._create_or_update(old_tmpl.key)
 
     def _create_or_update(self, current_tmpl_key=None):
         self.store()
@@ -110,8 +125,11 @@ class Stack(object):
                         tmpl_deps.required_by(rsrc.name))
                 rsrc.store()
 
+        cleanup_deps = self._cleanup_deps({resource.GraphKey(r.name, r.key): r
+                                               for r in ext_rsrcs})
+
         from . import processes
         for graph_key, forward in self._initial_nodes(tmpl_deps, rsrcs,
                                                       ext_rsrcs, is_fresh):
             processes.converger.check_resource(graph_key, self.tmpl.key,
-                                               {}, forward)
+                                               {}, cleanup_deps, forward)

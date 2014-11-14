@@ -33,13 +33,19 @@ class Converger(process.MessageProcessor):
             rsrc.delete()
 
     @process.asynchronous
-    def check_resource(self, resource_key, template_key, data, forward):
-        rsrc = resource.Resource.load(resource_key.key)
+    def check_resource(self, resource_key, template_key, data, cleanup_deps,
+                       forward):
+        try:
+            rsrc = resource.Resource.load(resource_key.key)
+        except KeyError:
+            return
         tmpl = rsrc.stack.tmpl
 
         if tmpl.key != template_key:
             logger.debug('[%s] Traversal cancelled; stopping.', template_key)
             return
+
+        cleanup_graph = cleanup_deps.graph()
 
         if forward:
             self.check_resource_update(rsrc, template_key, data)
@@ -50,10 +56,14 @@ class Converger(process.MessageProcessor):
             input_data = resource.InputData(rsrc.key,
                                             rsrc.refid(), rsrc.attributes())
 
-            self.propagate_check_resource(resource_key,
-                                          template_key,
-                                          rsrc.requirers | {resource_key},
-                                          resource_key, rsrc.key, False)
+            if resource_key in cleanup_graph:
+                cleanup_requirers = (set(cleanup_graph[resource_key]) |
+                                        {resource_key})
+                self.propagate_check_resource(resource_key,
+                                              template_key,
+                                              cleanup_requirers,
+                                              resource_key, rsrc.key,
+                                              cleanup_deps, False)
 
             for req in rsrc.requirers:
                 defn = tmpl.resources.get(req.name)
@@ -62,25 +72,24 @@ class Converger(process.MessageProcessor):
                     self.propagate_check_resource(req, template_key,
                                                   set(graph[req.name]),
                                                   rsrc.name,
-                                                  input_data, True)
+                                                  input_data,
+                                                  cleanup_deps, True)
         else:
             self.check_resource_cleanup(rsrc, template_key, data)
 
-            for req in rsrc.requirements:
-                # Note that this is pretty inefficient, since it requires each
-                # next node to be loaded from the DB in order to determine how
-                # many signals they each need to wait for. It may be possible
-                # to pregenerate this data at the beginning of the update and
-                # pass it down through the RPC messages instead.
-                req_rsrc = resource.Resource.load(req.key)
+            if resource_key in cleanup_graph:
+                for req in cleanup_deps.required_by(resource_key):
+                    requirers = set(cleanup_graph[req]) | {resource_key}
 
-                self.propagate_check_resource(req,
-                                              template_key,
-                                              req_rsrc.requirers,
-                                              resource_key, rsrc.key, False)
+                    self.propagate_check_resource(req,
+                                                  template_key,
+                                                  requirers,
+                                                  resource_key, rsrc.key,
+                                                  cleanup_deps, False)
 
     def propagate_check_resource(self, next_res_graph_key, template_key,
-                                 predecessors, sender, sender_data, forward):
+                                 predecessors, sender, sender_data,
+                                 cleanup_deps, forward):
         if len(predecessors) == 1:
             logger.debug('[%s] Immediate %s %s: %s == %s',
                          template_key,
@@ -89,7 +98,7 @@ class Converger(process.MessageProcessor):
                          sender, predecessors)
             # Cut to the chase
             self.check_resource(next_res_graph_key, template_key,
-                                {sender: sender_data}, forward)
+                                {sender: sender_data}, cleanup_deps, forward)
             return
 
         key = '%s-%s-%s' % (next_res_graph_key.key, template_key,
@@ -115,7 +124,7 @@ class Converger(process.MessageProcessor):
                              'update' if forward else 'cleanup',
                              set(satisfied), predecessors)
                 self.check_resource(next_res_graph_key, template_key,
-                                    satisfied, forward)
+                                    satisfied, cleanup_deps, forward)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
