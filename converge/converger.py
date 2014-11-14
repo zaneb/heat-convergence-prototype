@@ -83,6 +83,11 @@ class Converger(process.MessageProcessor):
     def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender, sender_data, forward):
         if len(predecessors) == 1:
+            logger.debug('[%s] Immediate %s %s: %s == %s',
+                         template_key,
+                         next_res_graph_key,
+                         'update' if forward else 'cleanup',
+                         sender, predecessors)
             # Cut to the chase
             self.check_resource(next_res_graph_key, template_key,
                                 {sender: sender_data}, forward)
@@ -93,6 +98,11 @@ class Converger(process.MessageProcessor):
         try:
             sync_point = sync_points.read(key)
         except KeyError:
+            logger.debug('[%s] Waiting %s %s: %s != %s',
+                         template_key,
+                         next_res_graph_key,
+                         'update' if forward else 'cleanup',
+                         sender, predecessors)
             sync_points.create_with_key(key, predecessors=predecessors,
                                         satisfied={sender: sender_data})
         else:
@@ -100,10 +110,20 @@ class Converger(process.MessageProcessor):
             satisfied[sender] = sender_data
             predecessors |= sync_point.predecessors
             if set(satisfied).issuperset(predecessors):
+                logger.debug('[%s] Ready %s %s: %s == %s',
+                             template_key,
+                             next_res_graph_key,
+                             'update' if forward else 'cleanup',
+                             set(satisfied), predecessors)
                 self.check_resource(next_res_graph_key, template_key,
                                     satisfied, forward)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
+                logger.debug('[%s] Waiting %s %s: %s != %s',
+                             template_key,
+                             next_res_graph_key,
+                             'update' if forward else 'cleanup',
+                             set(satisfied), predecessors)
                 sync_points.update(key, predecessors=predecessors,
                                    satisfied=satisfied)
