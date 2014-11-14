@@ -72,10 +72,9 @@ class Converger(process.MessageProcessor):
                 # many signals they each need to wait for. It may be possible
                 # to pregenerate this data at the beginning of the update and
                 # pass it down through the RPC messages instead.
-                req_rsrc = resource.Resource.load(req)
+                req_rsrc = resource.Resource.load(req.key)
 
-                req_graph_key = resource.GraphKey(req_rsrc.name, req)
-                self.propagate_check_resource(req_graph_key,
+                self.propagate_check_resource(req,
                                               template_key,
                                               req_rsrc.requirers,
                                               resource_key, rsrc.key, False)

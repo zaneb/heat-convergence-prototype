@@ -82,7 +82,8 @@ class Resource(object):
 
     def create(self, template_key, resource_data):
         self.template_key = template_key
-        self.requirements = set(d.key for d in resource_data.values())
+        self.requirements = set(GraphKey(k, d.key)
+                                    for k, d in resource_data.items())
         self.props_data = self.defn.resolved_props(resource_data)
 
         uuid = reality.reality.create_resource(self.name, self.props_data)
@@ -99,7 +100,8 @@ class Resource(object):
         new_props_data = self.defn.resolved_props(resource_data)
 
         self.template_key = template_key
-        self.requirements = set(d.key for d in resource_data.values())
+        self.requirements = set(GraphKey(k, d.key)
+                                    for k, d in resource_data.items())
         self.props_data = new_props_data
         reality.reality.update_resource(self.physical_resource_id,
                                         self.props_data)
