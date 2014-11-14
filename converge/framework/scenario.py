@@ -39,4 +39,3 @@ class Scenario(object):
         local_ns = {}
         exec(self.code, global_env, local_ns)
         _event_loop()
-        local_ns.get('validate', lambda: None)()

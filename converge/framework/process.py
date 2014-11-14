@@ -70,6 +70,10 @@ class MessageProcessor(object):
                                      self.noop.MessageData(count - 1))
 
     @asynchronous
+    def validate(self, validation_func):
+        return validation_func()
+
+    @asynchronous
     def execute_func(self, func):
         '''
         Insert a function call in the message queue.

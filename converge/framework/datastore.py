@@ -72,3 +72,9 @@ class Datastore(object):
     @property
     def keys(self):
         return self._store.keys()
+
+    def dump(self):
+        dumped = dict(
+            [(key, dict(val.__dict__)) for key, val in self._store.iteritems()]
+        )
+        return dumped
