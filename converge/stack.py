@@ -95,7 +95,7 @@ class Stack(object):
             return resource.GraphKey(r, rsrcs[r].key)
 
         def store_resource(name):
-            requirers = [key(r) for r in tmpl_deps.required_by(name)]
+            requirers = (key(r) for r in tmpl_deps.required_by(name))
             rsrc = resource.Resource(rsrc_name, self, definitions[name],
                                      self.tmpl.key, set(requirers))
             rsrc.store()
