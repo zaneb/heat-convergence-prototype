@@ -1,8 +1,6 @@
 
-from .framework import datastore
 from .framework import process
 from . import resource
-from . import template
 from . import stack
 
 
@@ -13,13 +11,12 @@ class Converger(process.MessageProcessor):
     def get_reality(self):
         reality = []
         for resource_key in resource.resources.keys:
-            res = resource.resources.find(resource_key)
+            res = resource.resources.read(resource_key)
             reality.append({
                 'name': res.name,
                 'state': res.state,
                 'properties': res.properties,
             })
-        resource.resources.dump
         return reality
 
     def get_goal(self):
@@ -38,26 +35,33 @@ class Converger(process.MessageProcessor):
         # resources to create
         for resource in goal:
             if resource['name'] not in [r['name'] for r in reality]:
-                actions[resource['name']] = 'CREATE'
+                actions[resource['name']] = 'create'
         # resources to delete
         for resource in reality:
             if resource['name'] not in [r['name'] for r in goal]:
-                actions[resource['name']] = 'DELETE'
+                actions[resource['name']] = 'delete'
         return actions
 
     def get_possible_actions(self, actions):
         possible_actions = []
         for res_name, action in actions.iteritems():
             create_ready = resource.Resource.check_create_readiness(res_name)
-            if action == 'CREATE' and create_ready:
+            if action == 'create' and create_ready:
                 possible_actions.append(res_name)
             delete_ready = resource.Resource.check_delete_readiness(res_name)
-            if action == 'DELETE' and delete_ready:
+            if action == 'delete' and delete_ready:
                 possible_actions.append(res_name)
         return possible_actions
 
     def worker(self, action, res_name):
-        from ipdb import set_trace; set_trace()
+        if action == 'create':
+            res = stack.stack_resources.read(
+                stack.stack_resources.find(name=res_name).next()
+            )
+            resource.Resource.update_or_create(
+                name=res.name,
+                properties=res.properties,
+            )
 
     def converge(self, stack_name):
         self.stack_name = stack_name

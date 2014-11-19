@@ -3,7 +3,7 @@ from .stack import stack_resources
 
 
 resources = datastore.Datastore(
-    'StackResources',
+    'Resource',
     'key',
     'phys_id',
     'name',
@@ -13,14 +13,18 @@ resources = datastore.Datastore(
 
 
 class Resource(object):
-    def update_or_create(self, key=None, **data):
-        self.state = 'COMPLETE'
-        if not self.check_create_readiness(data):
-            self.state = 'ERROR'
+    def __init__(self, key):
+        self.data = resources.read(key)
+
+    @staticmethod
+    def update_or_create(key=None, **data):
+        state = 'COMPLETE'
+        if not Resource.check_create_readiness(data['name']):
+            state = 'ERROR'
         resource = {
             'name': data['name'],
             'properties': data['properties'],
-            'state': self.state,
+            'state': state,
             'phys_id': '{}_phys_id'.format(data['name'])
         }
         if key is not None:
@@ -28,6 +32,10 @@ class Resource(object):
             resources.update(**resource)
         else:
             resources.create(**resource)
+
+    def delete(self):
+        if not Resource.check_delete_readiness(self.name):
+            pass
 
     @staticmethod
     def check_create_readiness(res_name):
