@@ -1,113 +1,54 @@
-import collections
-import logging
-import uuid
-
 from .framework import datastore
+from .stack import stack_resources
 
 
-logger = logging.getLogger('rsrcs')
-
-GraphKey = collections.namedtuple('GraphKey', ['name', 'key', 'forward'])
-
-resources = datastore.Datastore('Resource',
-                                'key', 'stack_key', 'name', 'template_key',
-                                'props_data', 'phys_id')
-
-
-class UpdateReplace(Exception):
-    pass
+resources = datastore.Datastore(
+    'StackResources',
+    'key',
+    'phys_id',
+    'name',
+    'properties',
+    'state',
+)
 
 
 class Resource(object):
-    def __init__(self, name, stack, defn, template_key=None,
-                 props_data=None, phys_id=None,
-                 key=None):
-        self.key = key
-        self.name = name
-        self.stack = stack
-        self.defn = defn
-        self.template_key = template_key
-        self.props_data = props_data
-        self.physical_resource_id = phys_id
-
-    @classmethod
-    def _load_from_store(cls, key, get_stack):
-        loaded = resources.read(key)
-        return cls(loaded.name, get_stack(loaded.stack_key),
-                   None,
-                   loaded.template_key,
-                   loaded.props_data,
-                   loaded.phys_id,
-                   loaded.key)
-
-    @classmethod
-    def load(cls, key):
-        from . import stack
-
-        return cls._load_from_store(key, stack.Stack.load)
-
-    @classmethod
-    def load_all_from_stack(cls, stack):
-        stored = resources.find(stack_key=stack.key)
-        return (cls._load_from_store(key, lambda sk: stack) for key in stored)
-
-    def graph_key(self, forward=True):
-        return GraphKey(self.name, self.key, forward)
-
-    def store(self):
-        data = {
-            'name': self.name,
-            'stack_key': self.stack.key,
-            'template_key': self.template_key,
-            'phys_id': self.physical_resource_id,
-            'props_data': self.props_data,
+    def update_or_create(self, key=None, **data):
+        self.state = 'COMPLETE'
+        if not self.check_create_readiness(data):
+            self.state = 'ERROR'
+        resource = {
+            'name': data['name'],
+            'properties': data['properties'],
+            'state': self.state,
+            'phys_id': '{}_phys_id'.format(data['name'])
         }
-
-        if self.key is None:
-            self.key = resources.create(**data)
+        if key is not None:
+            resource.update({'key': key})
+            resources.update(**resource)
         else:
-            resources.update(self.key, **data)
+            resources.create(**resource)
 
-    def refid(self):
-        return self.physical_resource_id
+    @staticmethod
+    def check_create_readiness(res_name):
+        equivalent = stack_resources.read(
+            stack_resources.find(name=res_name).next()
+        )
+        for dependency_name in equivalent.depends_on:
+            try:
+                dependency = stack_resources.read(
+                    resources.find(name=dependency_name).next()
+                )
+            except StopIteration:
+                dependency = None
+            if not dependency or dependency.state != 'COMPLETE':
+                return False
+        return True
 
-    def attributes(self):
-        # Just mirror properties -> attributes for test purposes
-        return self.props_data
-
-    def create(self, template_key, resource_ids, resource_attrs):
-        self.physical_resource_id = self.name + "_phys_id"  # predictable phys_id for test purposes
-        self.template_key = template_key
-        self.props_data = self.defn.resolved_props(resource_ids,
-                                                   resource_attrs)
-        logger.info('[%s(%d)] Created %s' % (self.name,
-                                             self.key,
-                                             self.physical_resource_id))
-        logger.info('[%s(%d)] Properties: %s' % (self.name,
-                                                 self.key,
-                                                 self.props_data))
-        self.store()
-
-    def update(self, template_key, resource_ids, resource_attrs):
-        new_props_data = self.defn.resolved_props(resource_ids,
-                                                  resource_attrs)
-        for key, val in new_props_data.items():
-            if val != self.props_data[key] and '!' in key:
-                logger.info('[%s(%d)] Needs replacement' % (self.name,
-                                                            self.key))
-                raise UpdateReplace
-
-        logger.info('[%s(%d)] Updating in place' % (self.name,
-                                                    self.key))
-        self.template_key = template_key
-        self.props_data = new_props_data
-        logger.info('[%s(%d)] Properties: %s' % (self.name,
-                                                 self.key,
-                                                 self.props_data))
-        self.store()
-
-    def delete(self):
-        logger.info('[%s(%d)] Deleted %s' % (self.name,
-                                             self.key,
-                                             self.physical_resource_id))
-        resources.delete(self.key)
+    @staticmethod
+    def check_delete_readiness(res_name):
+        for resource_key in stack_resources.keys:
+            res = stack_resources.read(resource_key)
+            if res_name in res.depends_on:
+                return False
+        return True

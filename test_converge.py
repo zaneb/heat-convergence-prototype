@@ -28,7 +28,8 @@ def with_scenarios(TestCase):
 
         for scenario in getattr(TestCase, 'scenarios', []):
             name, parameters = scenario
-
+            if name != "basic_create":
+                continue
             test_func = create_test_func(base_test, parameters)
             setattr(TestCase, '%s(%s)' % (test_name, name), test_func)
 
@@ -45,6 +46,7 @@ class ScenarioTest(unittest.TestCase):
                     for name, path in scenario.list_all('scenarios')]
 
     def setUp(self):
+        self.maxDiff = None
         super(ScenarioTest, self).setUp()
         self.procs = converge.processes.Processes()
 

@@ -1,102 +1,69 @@
+
 from .framework import datastore
 from .framework import process
-
 from . import resource
 from . import template
-
-
-sync_points = datastore.Datastore('SyncPoint',
-                                  'key', 'predecessors', 'satisfied')
+from . import stack
 
 
 class Converger(process.MessageProcessor):
     def __init__(self):
         super(Converger, self).__init__('converger')
 
-    def check_resource_update(self, rsrc, template_key):
-        if rsrc.stack.tmpl.key != template_key:
-            # Out of date
-            return False
+    def get_reality(self):
+        reality = []
+        for resource_key in resource.resources.keys:
+            res = resource.resources.find(resource_key)
+            reality.append({
+                'name': res.name,
+                'state': res.state,
+                'properties': res.properties,
+            })
+        resource.resources.dump
+        return reality
 
-        rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
+    def get_goal(self):
+        goal = []
+        for resource_key in stack.stack_resources.keys:
+            res = stack.stack_resources.read(resource_key)
+            goal.append({
+                'name': res.name,
+                'state': 'COMPLETE',
+                'properties': res.properties,
+            })
+        return goal
 
-        # TODO: push instead of querying this data. Clearly this is
-        # hideously inefficient.
-        graph = rsrc.stack.dependencies().graph()
-        resources = filter(lambda r: r.graph_key() in graph,
-                           resource.Resource.load_all_from_stack(rsrc.stack))
-        res_ids = {r.name: r.refid() for r in resources}
-        res_attrs = {r.name: r.attributes() for r in resources}
+    def get_diff(self, reality, goal):
+        actions = {}
+        # resources to create
+        for resource in goal:
+            if resource['name'] not in [r['name'] for r in reality]:
+                actions[resource['name']] = 'CREATE'
+        # resources to delete
+        for resource in reality:
+            if resource['name'] not in [r['name'] for r in goal]:
+                actions[resource['name']] = 'DELETE'
+        return actions
 
-        if rsrc.physical_resource_id is None:
-            rsrc.create(template_key, res_ids, res_attrs)
-        else:
-            try:
-                rsrc.update(template_key, res_ids, res_attrs)
-            except resource.UpdateReplace:
-                replacement = rsrc.stack.create_replacement(rsrc.name,
-                                                            rsrc.defn,
-                                                            rsrc.key)
-                replacement.create(template_key, res_ids, res_attrs)
+    def get_possible_actions(self, actions):
+        possible_actions = []
+        for res_name, action in actions.iteritems():
+            create_ready = resource.Resource.check_create_readiness(res_name)
+            if action == 'CREATE' and create_ready:
+                possible_actions.append(res_name)
+            delete_ready = resource.Resource.check_delete_readiness(res_name)
+            if action == 'DELETE' and delete_ready:
+                possible_actions.append(res_name)
+        return possible_actions
 
-        return True
+    def worker(self, action, res_name):
+        from ipdb import set_trace; set_trace()
 
-    def check_resource_cleanup(self, rsrc, template_key):
-        if rsrc.template_key != template_key:
-            rsrc.delete()
-
-        return True
-
-    @process.asynchronous
-    def check_resource(self, resource_key, template_key, forward):
-        try:
-            rsrc = resource.Resource.load(resource_key)
-        except KeyError:
-            if not forward:
-                return
-            else:
-                raise
-
-        if forward:
-            do_check = self.check_resource_update
-        else:
-            do_check = self.check_resource_cleanup
-
-        if not do_check(rsrc, template_key):
-            return
-
-        deps = rsrc.stack.dependencies()
-        graph = deps.graph()
-
-        graph_key = rsrc.graph_key(forward)
-        for req in deps.required_by(graph_key):
-            self.propagate_check_resource(req, template_key,
-                                          set(graph[req]), graph_key)
-
-    def propagate_check_resource(self, next_res_graph_key, template_key,
-                                 predecessors, sender):
-        if len(predecessors) == 1:
-            # Cut to the chase
-            self.check_resource(next_res_graph_key.key, template_key,
-                                next_res_graph_key.forward)
-            return
-
-        key = '%s-%s-%s' % (next_res_graph_key.key,
-                            template_key,
-                            next_res_graph_key.forward and 'F' or 'R')
-        try:
-            sync_point = sync_points.read(key)
-        except KeyError:
-            sync_points.create_with_key(key, predecessors=predecessors,
-                                        satisfied=[sender])
-        else:
-            satisfied = sync_point.satisfied + [sender]
-            predecessors |= sync_point.predecessors
-            if set(satisfied).issuperset(predecessors):
-                self.check_resource(next_res_graph_key.key, template_key,
-                                    next_res_graph_key.forward)
-                sync_points.delete(key)
-            else:
-                # Note: update must be atomic
-                sync_points.update(key, predecessors=predecessors,
-                                   satisfied=satisfied)
+    def converge(self, stack_name):
+        self.stack_name = stack_name
+        reality = self.get_reality()
+        goal = self.get_goal()
+        all_actions = self.get_diff(reality, goal)
+        possible_actions = self.get_possible_actions(all_actions)
+        for res_name in possible_actions:
+            self.worker(all_actions[res_name], res_name)

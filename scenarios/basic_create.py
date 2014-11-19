@@ -42,4 +42,5 @@ example_template = Template({
     'B': RsrcDef({}, []),
 })
 engine.create_stack('basic_create', example_template)
+engine.converge('basic_create', 1)
 engine.validate(validate)

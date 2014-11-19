@@ -1,6 +1,6 @@
 from .framework import process
 from . import stack
-from . import template
+from . import converger
 
 
 class Engine(process.MessageProcessor):
@@ -25,3 +25,9 @@ class Engine(process.MessageProcessor):
     def delete_stack(self, stack_name):
         existing_stack = stack.Stack.load_by_name(stack_name)
         existing_stack.delete()
+
+    @process.asynchronous
+    def converge(self, stack_name, iterations):
+        conv = converger.Converger()
+        for i in xrange(iterations):
+            conv.converge(stack_name)
