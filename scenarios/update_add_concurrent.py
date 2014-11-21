@@ -6,39 +6,40 @@ def validate_create_add():
         {0: {'key': 0,
              'name': 'A',
              'phys_id': 'A_phys_id',
-             'props_data': None,
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          1: {'key': 1,
              'name': 'B',
              'phys_id': 'B_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          2: {'key': 2,
              'name': 'C',
              'phys_id': 'C_phys_id',
-             'props_data': {'a': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'a': '4alpha'},
+             },
          3: {'key': 3,
              'name': 'E',
              'phys_id': 'E_phys_id',
-             'props_data': {'ca': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'ca': '4alpha'},
+             },
          4: {'key': 4,
              'name': 'D',
              'phys_id': 'D_phys_id',
-             'props_data': {'c': 'C_phys_id'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'c': 'C_phys_id'},
+             },
          5: {'key': 5,
              'name': 'F',
              'phys_id': 'F_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0}}
+             'state': 'COMPLETE',
+             'properties': {},
+             }
+         }
     )
 
 
@@ -46,19 +47,20 @@ example_template = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
     'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
-    'D': RsrcDef({'c': GetRes('C')}, []),
-    'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
+    'E': RsrcDef({'ca': GetAtt('C', 'a')}, ['C']),
 })
-engine.create_stack('foo', example_template)
-engine.noop(2)
+engine.create_stack('update_add_concurrent', example_template)
+engine.converge('update_add_concurrent', 10)
 
 example_template2 = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
     'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
-    'D': RsrcDef({'c': GetRes('C')}, []),
-    'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
+    'E': RsrcDef({'ca': GetAtt('C', 'a')}, ['C']),
     'F': RsrcDef({}, ['D', 'E']),
 })
-engine.update_stack('foo', example_template2)
+engine.update_stack('update_add_concurrent', example_template2)
+engine.converge('update_add_concurrent', 10)
 engine.validate(validate_create_add)

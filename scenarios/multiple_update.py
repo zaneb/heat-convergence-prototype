@@ -6,33 +6,34 @@ def validate_create():
         {0: {'key': 0,
              'name': 'A',
              'phys_id': 'A_phys_id',
-             'props_data': None,
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          1: {'key': 1,
              'name': 'B',
              'phys_id': 'B_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          2: {'key': 2,
              'name': 'C',
              'phys_id': 'C_phys_id',
-             'props_data': {'a': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'a': '4alpha'},
+             },
          3: {'key': 3,
              'name': 'E',
              'phys_id': 'E_phys_id',
-             'props_data': {'ca': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'ca': '4alpha'},
+             },
          4: {'key': 4,
              'name': 'D',
              'phys_id': 'D_phys_id',
-             'props_data': {'c': 'C_phys_id'},
-             'stack_key': 0,
-             'template_key': 0}}
+             'state': 'COMPLETE',
+             'properties': {'c': 'C_phys_id'},
+             }
+         }
     )
 
 
@@ -43,40 +44,40 @@ def validate_update_long():
         {0: {'key': 0,
              'name': 'A',
              'phys_id': 'A_phys_id',
-             'props_data': None,
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          1: {'key': 1,
              'name': 'B',
              'phys_id': 'B_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          2: {'key': 2,
              'name': 'C',
              'phys_id': 'C_phys_id',
-             'props_data': {'a': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
-         4: {'key': 4,
-             'name': 'D',
-             'phys_id': 'D_phys_id',
-             'props_data': {'c': 'C_phys_id'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'a': '4alpha'},
+             },
          5: {'key': 5,
              'name': 'E',
              'phys_id': 'E_phys_id',
-             'props_data': {'ca': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'ca': '4alpha'},
+             },
+         4: {'key': 4,
+             'name': 'D',
+             'phys_id': 'D_phys_id',
+             'state': 'COMPLETE',
+             'properties': {'c': 'C_phys_id'},
+             },
          6: {'key': 6,
              'name': 'F',
              'phys_id': 'F_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0},
-         },
+             'state': 'COMPLETE',
+             'properties': {},
+             }
+         }
     )
 
 
@@ -87,27 +88,28 @@ def validate_update_shrunk():
         {0: {'key': 0,
              'name': 'A',
              'phys_id': 'A_phys_id',
-             'props_data': None,
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          1: {'key': 1,
              'name': 'B',
              'phys_id': 'B_phys_id',
-             'props_data': {},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {},
+             },
          2: {'key': 2,
              'name': 'C',
              'phys_id': 'C_phys_id',
-             'props_data': {'a': '4alpha'},
-             'stack_key': 0,
-             'template_key': 0},
+             'state': 'COMPLETE',
+             'properties': {'a': '4alpha'},
+             },
          4: {'key': 4,
              'name': 'D',
              'phys_id': 'D_phys_id',
-             'props_data': {'c': 'C_phys_id'},
-             'stack_key': 0,
-             'template_key': 0}}
+             'state': 'COMPLETE',
+             'properties': {'c': 'C_phys_id'},
+             },
+         }
     )
 
 
@@ -115,31 +117,31 @@ example_template = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
     'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
-    'D': RsrcDef({'c': GetRes('C')}, []),
-    'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
+    'E': RsrcDef({'ca': GetAtt('C', 'a')}, ['C']),
 })
 engine.create_stack('multiple_update', example_template)
+engine.converge('multiple_update', 5)
 engine.validate(validate_create)
-engine.noop(5)
 
 example_template_shrunk = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
     'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
-    'D': RsrcDef({'c': GetRes('C')}, []),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
 })
 engine.update_stack('multiple_update', example_template_shrunk)
-engine.noop(10)
+engine.converge('multiple_update', 6)
 engine.validate(validate_update_shrunk)
 
 example_template_long = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
     'C': RsrcDef({'a': '4alpha'}, ['A', 'B']),
-    'D': RsrcDef({'c': GetRes('C')}, []),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
     'F': RsrcDef({}, ['D', 'E']),
-    'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
+    'E': RsrcDef({'ca': GetAtt('C', 'a')}, ['C']),
 })
 engine.update_stack('multiple_update', example_template_long)
-engine.noop(12)
+engine.converge('multiple_update', 10)
 engine.validate(validate_update_long)

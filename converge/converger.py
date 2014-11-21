@@ -79,13 +79,14 @@ class Converger(process.MessageProcessor):
         task from queue and perform it.
         """
         if action == 'create':
-            res = stack.stack_resources.read(
-                stack.stack_resources.find(name=res_name).next()
-            )
+            res = stack.get_stack_resource_by_name(name=res_name)
             resource.Resource.update_or_create(
                 name=res.name,
                 properties=res.properties,
             )
+        elif action == 'delete':
+            res = resource.Resource.get_by_name(res_name)
+            res.delete()
 
     def converge(self, stack_name):
         """

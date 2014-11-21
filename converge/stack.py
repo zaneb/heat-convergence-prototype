@@ -63,6 +63,11 @@ class Stack(object):
         return cls(name=stack_ds.name, tmpl=tmpl, key=stack_ds.key)
 
     def create(self, version=1):
+        """
+        All actions like create changes "goal stacks", not reality. This way
+        it will be very small operation (in comparason to actually creating
+        stacks), and it can be transaction.
+        """
         self.key = stacks.create(version=version, **self.data)
         for res_name, res_def in self.tmpl.resources.iteritems():
             stack_resources.create(**{
@@ -82,3 +87,7 @@ class Stack(object):
     def get_resources(self):
         resources = stack_resources.find(stack=self.key)
         return map(lambda rkey: stack_resources.read(rkey), resources)
+
+    def delete(self):
+        empty_template = template.Template({})
+        self.update(empty_template)

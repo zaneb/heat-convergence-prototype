@@ -20,6 +20,7 @@ class Resource(object):
     for validation purposes
     """
     def __init__(self, key):
+        self.key = key
         self.data = resources.read(key)
 
     @staticmethod
@@ -55,8 +56,12 @@ class Resource(object):
             resources.create(**resource)
 
     def delete(self):
-        if not Resource.check_delete_readiness(self.name):
-            pass
+        if not Resource.check_delete_readiness(self.data.name):
+            resources.update(key=self.key, state="ERROR")
+            return
+        resources.delete(self.key)
+        stack_res = get_stack_resource_by_name(self.data.name)
+        stack_resources.update(key=stack_res.key, state="DELETE")
 
     @staticmethod
     def check_create_readiness(res_name):
@@ -79,8 +84,23 @@ class Resource(object):
 
     @staticmethod
     def check_delete_readiness(res_name):
-        for resource_key in stack_resources.keys:
-            res = stack_resources.read(resource_key)
-            if res_name in res.depends_on:
+        all_stack_names = set(
+            map(
+                lambda r: r.name,
+                stack_resources._store.itervalues(),
+            )
+        )
+        for resource_name in all_stack_names:
+            res = get_stack_resource_by_name(resource_name)
+            if res_name in res.depends_on and res.state != "DELETE":
                 return False
         return True
+
+    @classmethod
+    def get_by_name(cls, res_name):
+        res_ds = resources.read(
+            resources.find(
+                name=res_name,
+            ).next()
+        )
+        return cls(key=res_ds.key)
