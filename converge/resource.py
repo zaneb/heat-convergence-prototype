@@ -1,5 +1,6 @@
 from .framework import datastore
-from .stack import stack_resources
+from .stack import stack_resources, get_stack_resource_by_name
+from .template import GetAtt, GetRes
 
 
 resources = datastore.Datastore(
@@ -13,6 +14,11 @@ resources = datastore.Datastore(
 
 
 class Resource(object):
+    """
+    This class simulates "real resources", therefore it has no notion of
+    dependency here. Statuses and dependency checks in create/delete/update are
+    for validation purposes
+    """
     def __init__(self, key):
         self.data = resources.read(key)
 
@@ -21,6 +27,21 @@ class Resource(object):
         state = 'COMPLETE'
         if not Resource.check_create_readiness(data['name']):
             state = 'ERROR'
+        for prop, prop_value in data['properties'].iteritems():
+            if type(prop_value) == GetRes:
+                source = resources.read(
+                    resources.find(
+                        name=prop_value.target_name,
+                    ).next()
+                )
+                data['properties'][prop] = source.phys_id
+            if type(prop_value) == GetAtt:
+                source = resources.read(
+                    resources.find(
+                        name=prop_value.target_name,
+                    ).next()
+                )
+                data['properties'][prop] = source.properties[prop_value.attr]
         resource = {
             'name': data['name'],
             'properties': data['properties'],
@@ -39,9 +60,12 @@ class Resource(object):
 
     @staticmethod
     def check_create_readiness(res_name):
-        equivalent = stack_resources.read(
-            stack_resources.find(name=res_name).next()
-        )
+        """
+        This is logic we might potentially have to implement in resource api.
+        Resource objects should have methods to determine if all dependencies
+        for actions have been met
+        """
+        equivalent = get_stack_resource_by_name(res_name)
         for dependency_name in equivalent.depends_on:
             try:
                 dependency = stack_resources.read(

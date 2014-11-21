@@ -3,8 +3,6 @@ import logging
 from .framework import datastore
 
 from . import dependencies
-from . import resource
-
 
 logger = logging.getLogger('tmpl ')
 
