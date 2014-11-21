@@ -1,6 +1,8 @@
 import functools
 import logging
 
+from . import template
+
 
 logger = logging.getLogger('test')
 
@@ -25,15 +27,33 @@ class DummyTestCase(object):
             raise AttributeError(name)
 
 
-def verify(test, reality, template):
-    for name, defn in template.resources.items():
-        phys_rsrcs = reality.resources_by_logical_name(name)
-        rsrc_count = len(phys_rsrcs)
+def verify(test, reality, tmpl):
+    for name in tmpl.resources:
+        rsrc_count = len(reality.resources_by_logical_name(name))
         test.assertEqual(1, rsrc_count,
                          'Found %d copies of resource "%s"' % (rsrc_count,
                                                                name))
 
-        phys_rsrc = phys_rsrcs.values()[0]
-        test.assertEqual(defn.properties, phys_rsrc.properties)
+    all_rsrcs = reality.all_resources()
 
-    test.assertEqual(len(template.resources), len(reality.all_resources()))
+    for name, defn in tmpl.resources.items():
+        phys_rsrc = list(reality.resources_by_logical_name(name).values())[0]
+
+        for prop_name, prop_def in defn.properties.items():
+            real_value = phys_rsrc.properties[prop_name]
+
+            if isinstance(prop_def, template.GetAtt):
+                targs = reality.resources_by_logical_name(prop_def.target_name)
+                att_value = list(targs.values())[0].properties[prop_def.attr]
+                test.assertEqual(att_value, real_value)
+
+            elif isinstance(prop_def, template.GetRes):
+                targs = reality.resources_by_logical_name(prop_def.target_name)
+                test.assertEqual(list(targs)[0], real_value)
+
+            else:
+                test.assertEqual(prop_def, real_value)
+
+        test.assertEqual(len(defn.properties), len(phys_rsrc.properties))
+
+    test.assertEqual(len(tmpl.resources), len(all_rsrcs))
