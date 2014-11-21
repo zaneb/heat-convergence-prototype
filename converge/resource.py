@@ -1,7 +1,7 @@
 import logging
-import uuid
 
 from .framework import datastore
+from . import reality
 
 
 logger = logging.getLogger('rsrcs')
@@ -52,13 +52,15 @@ class Resource(object):
             resources.update(self.key, **data)
 
     def create(self):
-        self.physical_resource_id = str(uuid.uuid4())
+        self.physical_resource_id = reality.reality.create_resource(self.name,
+                                                                    {})
         logger.info('[%s(%d)] Created %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
         self.store()
 
     def delete(self):
+        reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))

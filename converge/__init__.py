@@ -18,9 +18,11 @@ def setup_log(logger):
 
 def scenario_globals(procs, testcase=None):
     from . import template
+    from . import reality
 
     return {
         'test': procs.engine.testproxy(testcase),
+        'reality': reality.reality,
 
         'Template': template.Template,
         'RsrcDef': template.RsrcDef,
