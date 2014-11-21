@@ -4,6 +4,8 @@ An OpenStack Heat convergence algorithm simulator.
 
 import logging
 
+from . import testutils
+
 
 def setup_log(logger):
     log_handler = logging.StreamHandler()
@@ -16,12 +18,12 @@ def setup_log(logger):
     logger.setLevel(logging.DEBUG)
 
 
-def scenario_globals(procs, testcase=None):
+def scenario_globals(procs, testcase=testutils.DummyTestCase()):
     from . import template
     from . import reality
 
     return {
-        'test': procs.engine.testproxy(testcase),
+        'test': testcase,
         'reality': reality.reality,
 
         'Template': template.Template,
