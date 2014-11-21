@@ -2,6 +2,7 @@
 An OpenStack Heat convergence algorithm simulator.
 '''
 
+import functools
 import logging
 
 from . import testutils
@@ -25,6 +26,8 @@ def scenario_globals(procs, testcase=testutils.DummyTestCase()):
     return {
         'test': testcase,
         'reality': reality.reality,
+        'verify': functools.partial(testutils.verify,
+                                    testcase, reality.reality),
 
         'Template': template.Template,
         'RsrcDef': template.RsrcDef,
