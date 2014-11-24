@@ -10,6 +10,8 @@ resources = datastore.Datastore(
     'name',
     'properties',
     'state',
+    'version',
+    'prop_refs',
 )
 
 
@@ -28,6 +30,7 @@ class Resource(object):
         state = 'COMPLETE'
         if not Resource.check_create_readiness(data['name']):
             state = 'ERROR'
+        prop_refs = []
         for prop, prop_value in data['properties'].iteritems():
             if type(prop_value) == GetRes:
                 source = resources.read(
@@ -43,17 +46,23 @@ class Resource(object):
                     ).next()
                 )
                 data['properties'][prop] = source.properties[prop_value.attr]
+                prop_refs.append({
+                    'resource': source.name,
+                    'version': source.version,
+                })
         resource = {
             'name': data['name'],
             'properties': data['properties'],
             'state': state,
-            'phys_id': '{}_phys_id'.format(data['name'])
+            'phys_id': '{}_phys_id'.format(data['name']),
+            'prop_refs': prop_refs,
         }
         if key is not None:
             resource.update({'key': key})
-            resources.update(**resource)
+            current_version = resources.read(key).version
+            resources.update(version=current_version + 1, **resource)
         else:
-            resources.create(**resource)
+            resources.create(version=1, **resource)
 
     def delete(self):
         if not Resource.check_delete_readiness(self.data.name):
@@ -95,6 +104,24 @@ class Resource(object):
             if res_name in res.depends_on and res.state != "DELETE":
                 return False
         return True
+
+    @staticmethod
+    def check_update_required(res_name):
+        equivalent = get_stack_resource_by_name(res_name)
+        res = Resource.get_by_name(res_name)
+        if equivalent.properties.keys() != res.data.properties.keys():
+            return True
+        for prop_ref in res.data.prop_refs:
+            dependency = Resource.get_by_name(prop_ref['resource'])
+            if dependency.data.version != prop_ref['version']:
+                return True
+        for prop_key, prop_value in equivalent.properties.iteritems():
+            if all((
+                (type(prop_value) == str),
+                (res.data.properties[prop_key] != prop_value),
+            )):
+                return True
+        return False
 
     @classmethod
     def get_by_name(cls, res_name):

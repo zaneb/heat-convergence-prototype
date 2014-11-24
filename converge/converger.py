@@ -49,13 +49,19 @@ class Converger(process.MessageProcessor):
         """
         actions = {}
         # resources to create
-        for resource in goal:
-            if resource['name'] not in [r['name'] for r in reality]:
-                actions[resource['name']] = 'create'
+        for res in goal:
+            if res['name'] not in [r['name'] for r in reality]:
+                actions[res['name']] = 'create'
+                continue
         # resources to delete
-        for resource in reality:
-            if resource['name'] not in [r['name'] for r in goal]:
-                actions[resource['name']] = 'delete'
+        for res in reality:
+            if res['name'] not in [r['name'] for r in goal]:
+                actions[res['name']] = 'delete'
+                continue
+        # resources to update
+        for res in reality:
+            if resource.Resource.check_update_required(res['name']):
+                actions[res['name']] = 'update'
         return actions
 
     def get_possible_actions(self, actions):
@@ -70,6 +76,8 @@ class Converger(process.MessageProcessor):
                 possible_actions.append(res_name)
             delete_ready = resource.Resource.check_delete_readiness(res_name)
             if action == 'delete' and delete_ready:
+                possible_actions.append(res_name)
+            if action == 'update':
                 possible_actions.append(res_name)
         return possible_actions
 
@@ -87,6 +95,14 @@ class Converger(process.MessageProcessor):
         elif action == 'delete':
             res = resource.Resource.get_by_name(res_name)
             res.delete()
+        elif action == 'update':
+            sres = stack.get_stack_resource_by_name(name=res_name)
+            res = resource.Resource.get_by_name(res_name)
+            res.update_or_create(
+                key=res.key,
+                properties=sres.properties,
+                name=res.data.name
+            )
 
     def converge(self, stack_name):
         """

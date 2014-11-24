@@ -28,8 +28,6 @@ def with_scenarios(TestCase):
 
         for scenario in getattr(TestCase, 'scenarios', []):
             name, parameters = scenario
-            # if name != "basic_create" and name != "update_add":
-                # continue
             test_func = create_test_func(base_test, parameters)
             setattr(TestCase, '%s(%s)' % (test_name, name), test_func)
 
