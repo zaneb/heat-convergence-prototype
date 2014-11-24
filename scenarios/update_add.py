@@ -1,3 +1,6 @@
+def check_results(expected_count):
+    test.assertEqual(expected_count, len(reality.all_resources()))
+
 example_template = Template({
     'A': RsrcDef({}, []),
     'B': RsrcDef({}, []),
@@ -7,6 +10,7 @@ example_template = Template({
 })
 engine.create_stack('foo', example_template)
 engine.noop(5)
+engine.call(verify, example_template)
 
 example_template2 = Template({
     'A': RsrcDef({}, []),
@@ -17,3 +21,5 @@ example_template2 = Template({
     'F': RsrcDef({}, ['D', 'E']),
 })
 engine.update_stack('foo', example_template2)
+engine.noop(11)
+engine.call(verify, example_template2)

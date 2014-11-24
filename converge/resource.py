@@ -1,8 +1,8 @@
 import collections
 import logging
-import uuid
 
 from .framework import datastore
+from . import reality
 
 
 logger = logging.getLogger('rsrcs')
@@ -76,10 +76,11 @@ class Resource(object):
         return self.props_data
 
     def create(self, template_key, resource_ids, resource_attrs):
-        self.physical_resource_id = str(uuid.uuid4())
         self.template_key = template_key
         self.props_data = self.defn.resolved_props(resource_ids,
                                                    resource_attrs)
+        uuid = reality.reality.create_resource(self.name, self.props_data)
+        self.physical_resource_id = uuid
         logger.info('[%s(%d)] Created %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
@@ -101,12 +102,15 @@ class Resource(object):
                                                     self.key))
         self.template_key = template_key
         self.props_data = new_props_data
+        reality.reality.update_resource(self.physical_resource_id,
+                                        self.props_data)
         logger.info('[%s(%d)] Properties: %s' % (self.name,
                                                  self.key,
                                                  self.props_data))
         self.store()
 
     def delete(self):
+        reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))

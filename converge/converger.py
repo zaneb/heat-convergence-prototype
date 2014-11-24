@@ -1,9 +1,13 @@
+import logging
+
 from .framework import datastore
 from .framework import process
 
 from . import resource
 from . import template
 
+
+logger = logging.getLogger('converger')
 
 sync_points = datastore.Datastore('SyncPoint',
                                   'key', 'predecessors', 'satisfied')
@@ -15,7 +19,7 @@ class Converger(process.MessageProcessor):
 
     def check_resource_update(self, rsrc, template_key):
         if rsrc.stack.tmpl.key != template_key:
-            # Out of date
+            logger.debug('[%s] Traversal cancelled; stopping.', template_key)
             return False
 
         rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
@@ -23,8 +27,8 @@ class Converger(process.MessageProcessor):
         # TODO: push instead of querying this data. Clearly this is
         # hideously inefficient.
         graph = rsrc.stack.dependencies().graph()
-        resources = filter(lambda r: r.graph_key() in graph,
-                           resource.Resource.load_all_from_stack(rsrc.stack))
+        loaded = resource.Resource.load_all_from_stack(rsrc.stack)
+        resources = [r for r in loaded if r.graph_key() in graph]
         res_ids = {r.name: r.refid() for r in resources}
         res_attrs = {r.name: r.attributes() for r in resources}
 
