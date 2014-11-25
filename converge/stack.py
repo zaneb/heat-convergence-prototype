@@ -36,7 +36,7 @@ class Stack(object):
     def load_by_name(cls, stack_name):
         candidates = list(stacks.find(name=stack_name))
         if not candidates:
-            raise KeyError('Stack "%s" not found' % stack_name)
+            raise stacks.NotFound('Stack "%s" not found' % stack_name)
         assert len(candidates) == 1, 'Multiple stacks "%s" found' % stack_name
         return cls.load(candidates[0])
 

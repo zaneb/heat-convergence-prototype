@@ -39,7 +39,7 @@ class Converger(process.MessageProcessor):
                        forward):
         try:
             rsrc = resource.Resource.load(resource_key.key)
-        except KeyError:
+        except resource.resources.NotFound:
             return
         tmpl = rsrc.stack.tmpl
 
@@ -95,7 +95,7 @@ class Converger(process.MessageProcessor):
 
         try:
             sync_point = sync_points.read(key)
-        except KeyError:
+        except sync_points.NotFound:
             sync_points.create_with_key(key, predecessors=roots,
                                         satisfied={sender: None})
         else:
@@ -126,7 +126,7 @@ class Converger(process.MessageProcessor):
                             'update' if forward else 'cleanup')
         try:
             sync_point = sync_points.read(key)
-        except KeyError:
+        except sync_points.NotFound:
             logger.debug('[%s] Waiting %s %s: %s != %s',
                          template_key,
                          next_res_graph_key,

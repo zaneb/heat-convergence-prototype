@@ -86,6 +86,10 @@ class Node(object):
         '''Return a string representation of the node.'''
         return repr(self.require)
 
+    def __eq__(self, other):
+        '''Return True if this node has the same requirements as the other.'''
+        return set(self) == set(other)
+
 
 class Graph(collections.defaultdict):
     '''A mutable mapping of objects to nodes in a dependency graph.'''
