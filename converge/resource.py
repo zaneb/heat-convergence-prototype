@@ -41,10 +41,7 @@ class Resource(object):
                         name=prop_value.target_name,
                     ).next()
                 )
-                data['properties'][prop] = {
-                    'phys_id': source.phys_id,
-                    'name': source.name,
-                }
+                data['properties'][prop] = source.phys_id
             if type(prop_value) == GetAtt:
                 source = resources.read(
                     resources.find(
@@ -142,8 +139,14 @@ class Resource(object):
             local_prop = res.data.properties[prop_key]
             if type(prop_value) == str and local_prop != prop_value:
                 return True
-            elif type(prop_value) == GetRes and local_prop['name'] != prop_value.target_name:
-                return True
+            elif type(prop_value) == GetRes:
+                try:
+                    target = Resource.get_by_name(prop_value.target_name)
+                except StopIteration:
+                    return True
+
+                if local_prop != target.data.phys_id:
+                    return True
         return False
 
     @staticmethod
