@@ -80,6 +80,34 @@ class Converger(process.MessageProcessor):
                                           input_data if fwd else rsrc.key,
                                           deps, fwd)
 
+        if forward:
+            self.check_stack_complete(rsrc.stack, template_key, resource_key,
+                                      graph)
+
+    def check_stack_complete(self, stack, template_key, sender, graph):
+        roots = set(key for (key, fwd), node in graph.items()
+                        if fwd and not any(f for k, f in node.required_by()))
+
+        if sender not in roots:
+            return
+
+        key = '%s-%s' % (stack.key, template_key)
+
+        try:
+            sync_point = sync_points.read(key)
+        except KeyError:
+            sync_points.create_with_key(key, predecessors=roots,
+                                        satisfied={sender: None})
+        else:
+            satisfied = dict(sync_point.satisfied)
+            satisfied[sender] = None
+            if set(satisfied).issuperset(roots):
+                stack.mark_complete(template_key)
+                sync_points.delete(key)
+            else:
+                sync_points.update(key, predecessors=roots,
+                                   satisfied=satisfied)
+
     def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender, sender_data,
                                  deps, forward):

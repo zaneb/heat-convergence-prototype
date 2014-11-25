@@ -10,16 +10,17 @@ from . import template
 logger = logging.getLogger('stack')
 
 stacks = datastore.Datastore('Stack',
-                             'key', 'name', 'tmpl_key')
+                             'key', 'name', 'tmpl_key', 'prev_tmpl_key')
 
 
 class Stack(object):
-    def __init__(self, name, tmpl, key=None):
+    def __init__(self, name, tmpl, prev_tmpl_key=None, key=None):
         self.key = key
         self.tmpl = tmpl
         self.data = {
             'name': name,
             'tmpl_key': tmpl.key,
+            'prev_tmpl_key': prev_tmpl_key,
         }
 
     def __str__(self):
@@ -136,3 +137,17 @@ class Stack(object):
         for graph_key, forward in dependencies.leaves():
             processes.converger.check_resource(graph_key, self.tmpl.key,
                                                {}, dependencies, forward)
+
+    def mark_complete(self, template_key):
+        if template_key != self.tmpl.key:
+            return
+
+        logger.info('[%s(%d)] update to template %d complete',
+                    self.data['name'], self.key, template_key)
+
+        prev_prev_key = self.data['prev_tmpl_key']
+        self.data['prev_tmpl_key'] = template_key
+        self.store()
+
+        if prev_prev_key is not None and prev_prev_key != template_key:
+            template.templates.delete(prev_prev_key)
