@@ -146,7 +146,8 @@ class Resource(object):
         self.store()
 
     def delete(self):
-        reality.reality.delete_resource(self.physical_resource_id)
+        if self.physical_resource_id is not None:
+            reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,
                                              self.key,
                                              self.physical_resource_id))
