@@ -42,7 +42,7 @@ def validate_create():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              }
          }
     )
@@ -91,7 +91,7 @@ def validate_create_add():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              },
          5: {'key': 5,
              'name': 'F',

@@ -45,7 +45,7 @@ def validate():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              }
          }
     )

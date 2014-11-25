@@ -42,7 +42,7 @@ def validate_create():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              }
          }
     )
@@ -91,7 +91,7 @@ def validate_update_long():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              },
          6: {'key': 6,
              'name': 'F',
@@ -139,7 +139,7 @@ def validate_update_shrunk():
              'state': 'COMPLETE',
              'version': 1,
              'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
+             'properties': {'c': {'name': 'C', 'phys_id': 'C_phys_id'}},
              },
          }
     )
