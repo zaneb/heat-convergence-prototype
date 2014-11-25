@@ -57,33 +57,34 @@ class Stack(object):
         self._create_or_update(old_tmpl.key)
 
     @staticmethod
-    def _initial_nodes(tmpl_deps, current_resources,
-                       existing_resources, was_fresh):
-        for rsrc_name in tmpl_deps.leaves():
-            yield resource.GraphKey(rsrc_name,
-                                    current_resources[rsrc_name].key), True
+    def _dependencies(existing_resources,
+                      current_template_deps, current_resources):
+        def make_graph_key(res_name):
+            return (resource.GraphKey(res_name,
+                                      current_resources[res_name].key),
+                    True)
 
-        for rsrc in existing_resources:
-            if not rsrc.requirers:
-                if not was_fresh(rsrc) or rsrc.name not in current_resources:
-                    yield resource.GraphKey(rsrc.name, rsrc.key), False
+        deps = current_template_deps.translate(make_graph_key)
 
-    @staticmethod
-    def _cleanup_deps(existing_resources):
-        def edges():
-            for key, rsrc in existing_resources.items():
-                yield key, None
-                # Note: reversed edges as these are the cleanup dependencies
-                for requirer in rsrc.requirers:
-                    if requirer in existing_resources:
-                        yield key, requirer
-                for requirement in rsrc.requirements:
-                    if requirement in existing_resources:
-                        yield requirement, key
-                if rsrc.replaces in existing_resources:
-                    yield resource.GraphKey(rsrc.name, rsrc.replaces), key
+        for key, rsrc in existing_resources.items():
+            deps += (key, False), None
 
-        return dependencies.Dependencies(edges())
+            # Note: reversed edges as this is the cleanup part of the graph
+            for requirer in rsrc.requirers:
+                if requirer in existing_resources:
+                    deps += (key, False), (requirer, False)
+            for requirement in rsrc.requirements:
+                if requirement in existing_resources:
+                    deps += (requirement, False), (key, False)
+            if rsrc.replaces in existing_resources:
+                deps += ((resource.GraphKey(rsrc.name,
+                                            rsrc.replaces), False),
+                         (key, False))
+
+            if rsrc.name in current_template_deps:
+                deps += (key, False), make_graph_key(rsrc.name)
+
+        return deps
 
     def delete(self):
         old_tmpl, self.tmpl = self.tmpl, template.Template()
@@ -127,11 +128,11 @@ class Stack(object):
                         tmpl_deps.required_by(rsrc.name))
                 rsrc.store()
 
-        cleanup_deps = self._cleanup_deps({resource.GraphKey(r.name, r.key): r
-                                               for r in ext_rsrcs})
+        dependencies = self._dependencies({resource.GraphKey(r.name, r.key): r
+                                               for r in ext_rsrcs},
+                                          tmpl_deps, rsrcs)
 
         from . import processes
-        for graph_key, forward in self._initial_nodes(tmpl_deps, rsrcs,
-                                                      ext_rsrcs, is_fresh):
+        for graph_key, forward in dependencies.leaves():
             processes.converger.check_resource(graph_key, self.tmpl.key,
-                                               {}, cleanup_deps, forward)
+                                               {}, dependencies, forward)

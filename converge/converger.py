@@ -20,10 +20,12 @@ class Converger(process.MessageProcessor):
     def check_resource_update(self, rsrc, template_key, data):
         rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
 
+        input_data = {key.name: in_data for (key, fwd), in_data in data.items()}
+
         if rsrc.physical_resource_id is None:
-            rsrc.create(template_key, data)
+            rsrc.create(template_key, input_data)
         else:
-            rsrc.update(template_key, data)
+            rsrc.update(template_key, input_data)
 
     def check_resource_cleanup(self, rsrc, template_key, data):
         rsrc.clear_requirers(rsrc_key for rsrc_key, key in data.items()
@@ -33,7 +35,7 @@ class Converger(process.MessageProcessor):
             rsrc.delete()
 
     @process.asynchronous
-    def check_resource(self, resource_key, template_key, data, cleanup_deps,
+    def check_resource(self, resource_key, template_key, data, deps,
                        forward):
         try:
             rsrc = resource.Resource.load(resource_key.key)
@@ -45,7 +47,7 @@ class Converger(process.MessageProcessor):
             logger.debug('[%s] Traversal cancelled; stopping.', template_key)
             return
 
-        cleanup_graph = cleanup_deps.graph()
+        graph = deps.graph()
 
         if forward:
             if rsrc.replaced_by and rsrc.template_key != template_key:
@@ -57,56 +59,30 @@ class Converger(process.MessageProcessor):
                 replacement = rsrc.create_replacement(template_key, data)
                 self.check_resource(resource.GraphKey(replacement.name,
                                                       replacement.key),
-                                    template_key, data, cleanup_deps, True)
+                                    template_key, data, deps, True)
                 return
-
-            tmpl_deps = tmpl.dependencies()
-            graph = tmpl_deps.graph()
 
             input_data = resource.InputData(rsrc.key,
                                             rsrc.refid(), rsrc.attributes())
-
-            cleanup_node = resource.GraphKey(rsrc.name, rsrc.replaces)
-            if rsrc.replaces is not None and cleanup_node in cleanup_graph:
-                cleanup_node_key = cleanup_node.key
-            else:
-                cleanup_node = resource_key
-                cleanup_node_key = rsrc.key
-
-            if cleanup_node in cleanup_graph:
-                cleanup_requirers = (set(cleanup_graph[cleanup_node]) |
-                                        {cleanup_node})
-                self.propagate_check_resource(cleanup_node,
-                                              template_key,
-                                              cleanup_requirers,
-                                              cleanup_node, cleanup_node_key,
-                                              cleanup_deps, False)
-
-            for req in rsrc.requirers:
-                defn = tmpl.resources.get(req.name)
-                if defn is not None:
-                    predecessors = defn.dependency_names()
-                    self.propagate_check_resource(req, template_key,
-                                                  set(graph[req.name]),
-                                                  rsrc.name,
-                                                  input_data,
-                                                  cleanup_deps, True)
         else:
             self.check_resource_cleanup(rsrc, template_key, data)
 
-            if resource_key in cleanup_graph:
-                for req in cleanup_deps.required_by(resource_key):
-                    requirers = set(cleanup_graph[req]) | {resource_key}
 
-                    self.propagate_check_resource(req,
-                                                  template_key,
-                                                  requirers,
-                                                  resource_key, rsrc.key,
-                                                  cleanup_deps, False)
+        graph_key = (resource_key, forward)
+        if graph_key not in graph and rsrc.replaces:
+            graph_key = (resource.GraphKey(rsrc.name, rsrc.replaces),
+                         forward)
+
+        for req, fwd in deps.required_by(graph_key):
+            self.propagate_check_resource(req, template_key,
+                                          set(graph[(req, fwd)]),
+                                          graph_key,
+                                          input_data if fwd else rsrc.key,
+                                          deps, fwd)
 
     def propagate_check_resource(self, next_res_graph_key, template_key,
                                  predecessors, sender, sender_data,
-                                 cleanup_deps, forward):
+                                 deps, forward):
         if len(predecessors) == 1:
             logger.debug('[%s] Immediate %s %s: %s == %s',
                          template_key,
@@ -115,7 +91,7 @@ class Converger(process.MessageProcessor):
                          sender, predecessors)
             # Cut to the chase
             self.check_resource(next_res_graph_key, template_key,
-                                {sender: sender_data}, cleanup_deps, forward)
+                                {sender: sender_data}, deps, forward)
             return
 
         key = '%s-%s-%s' % (next_res_graph_key.key, template_key,
@@ -141,7 +117,7 @@ class Converger(process.MessageProcessor):
                              'update' if forward else 'cleanup',
                              set(satisfied), predecessors)
                 self.check_resource(next_res_graph_key, template_key,
-                                    satisfied, cleanup_deps, forward)
+                                    satisfied, deps, forward)
                 sync_points.delete(key)
             else:
                 # Note: update must be atomic
