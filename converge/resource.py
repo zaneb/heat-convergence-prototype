@@ -41,7 +41,10 @@ class Resource(object):
                         name=prop_value.target_name,
                     ).next()
                 )
-                data['properties'][prop] = source.phys_id
+                data['properties'][prop] = {
+                    'phys_id': source.phys_id,
+                    'name': source.name,
+                }
             if type(prop_value) == GetAtt:
                 source = resources.read(
                     resources.find(
@@ -113,6 +116,13 @@ class Resource(object):
             res = get_stack_resource_by_name(resource_name)
             if res_name in res.depends_on and res.state != "DELETE":
                 return False
+            try:
+                res_real = Resource.get_by_name(resource_name)
+            except StopIteration:
+                pass
+            else:
+                if res.replacement_of == res_name and res_real.state != "COMPLETE":
+                    return False
         return True
 
     @staticmethod
@@ -122,16 +132,32 @@ class Resource(object):
         if equivalent.properties.keys() != res.data.properties.keys():
             return True
         for prop_ref in res.data.prop_refs:
-            dependency = Resource.get_by_name(prop_ref['resource'])
+            try:
+                dependency = Resource.get_by_name(prop_ref['resource'])
+            except StopIteration:
+                return True
             if dependency.data.version != prop_ref['version']:
                 return True
         for prop_key, prop_value in equivalent.properties.iteritems():
-            if all((
-                (type(prop_value) == str),
-                (res.data.properties[prop_key] != prop_value),
-            )):
+            local_prop = res.data.properties[prop_key]
+            if type(prop_value) == str and local_prop != prop_value:
+                return True
+            elif type(prop_value) == GetRes and local_prop['name'] != prop_value.target_name:
                 return True
         return False
+
+    @staticmethod
+    def check_update_deps_readiness(new_deps):
+        for dependency_name in new_deps:
+            try:
+                dependency = stack_resources.read(
+                    resources.find(name=dependency_name).next()
+                )
+            except StopIteration:
+                dependency = None
+            if not dependency or dependency.state != 'COMPLETE':
+                return False
+        return True
 
     @classmethod
     def get_by_name(cls, res_name):

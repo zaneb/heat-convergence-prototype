@@ -49,7 +49,7 @@ def verify(test, reality, tmpl):
 
             elif isinstance(prop_def, template.GetRes):
                 targs = reality.resources_by_logical_name(prop_def.target_name)
-                test.assertEqual(list(targs)[0], real_value)
+                test.assertEqual(list(targs)[0], real_value['phys_id'])
 
             else:
                 test.assertEqual(prop_def, real_value)

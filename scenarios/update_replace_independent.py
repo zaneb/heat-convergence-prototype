@@ -10,11 +10,11 @@ engine.noop(10)
 engine.call(verify, example_template)
 
 example_template_replaced = Template({
-    'A': RsrcDef({'a': 'updated'}, []),
+    'A2': RsrcDef({'a': 'updated'}, []),
     'B': RsrcDef({}, []),
-    'C2': RsrcDef({'!a': GetAtt('A', 'a')}, ['B', 'A']),
-    'D': RsrcDef({'c': GetRes('C2')}, ['C2']),
-    'E': RsrcDef({'ca': GetAtt('C2', '!a')}, ['C2']),
+    'C': RsrcDef({'!a': GetAtt('A2', 'a')}, ['B', 'A2']),
+    'D': RsrcDef({'c': GetRes('C')}, ['C']),
+    'E': RsrcDef({'ca': GetAtt('C', '!a')}, ['C']),
 })
 engine.update_stack('update_replace', example_template_replaced)
 engine.noop(10)
