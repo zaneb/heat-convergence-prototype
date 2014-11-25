@@ -1,55 +1,3 @@
-def ipdb():
-    res_ds = get_datastore("Resource")
-    from IPython import embed; embed()
-
-
-def validate():
-    res_ds = get_datastore("Resource")
-    test.assertEqual(
-        dict(res_ds.dump()),
-        {0: {'key': 0,
-             'name': 'A',
-             'phys_id': 'A_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         1: {'key': 1,
-             'name': 'B',
-             'phys_id': 'B_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         2: {'key': 2,
-             'name': 'C',
-             'phys_id': 'C_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'a': '4alpha'},
-             },
-         3: {'key': 3,
-             'name': 'E',
-             'phys_id': 'E_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [{'resource': 'C', 'version': 1}],
-             'properties': {'ca': '4alpha'},
-             },
-         4: {'key': 4,
-             'name': 'D',
-             'phys_id': 'D_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
-             }
-         }
-    )
-
 example_template = Template({
     'C': RsrcDef({'a': '4alpha'}, ['B']),
     'D': RsrcDef({'c': GetRes('C')}, ['C', 'E']),
@@ -58,7 +6,5 @@ example_template = Template({
     'B': RsrcDef({}, ['A']),
 })
 engine.create_stack('basic_create', example_template)
-res_ds = get_datastore("Resource")
-engine.converge('basic_create', 2)
-engine.converge('basic_create', 5)
-engine.validate(validate)
+engine.noop(7)
+engine.call(verify, example_template)

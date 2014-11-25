@@ -21,7 +21,6 @@ def setup_log(logger):
 
 def scenario_globals(procs, testcase=testutils.DummyTestCase()):
     from . import template
-    from .framework import datastore
     from . import reality
 
     return {
@@ -37,9 +36,7 @@ def scenario_globals(procs, testcase=testutils.DummyTestCase()):
 
         'engine': procs.engine,
         'converger': procs.converger,
-        'get_datastore': datastore.get_datastore,
-        '__name__': __name__,
-        }
+    }
 
 
 def cli_options():

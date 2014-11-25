@@ -62,9 +62,16 @@ class Resource(object):
         }
         if key is not None:
             resource.update({'key': key})
-            current_version = resources.read(key).version
+            current_data = resources.read(key)
+            current_version = current_data.version
+            resource['phys_id'] = current_data.phys_id
+            reality.reality.update_resource(resource['phys_id'],
+                                            resource['properties'])
             resources.update(version=current_version + 1, **resource)
         else:
+            props = resource['properties']
+            resource['phys_id'] = reality.reality.create_resource(data['name'],
+                                                                  props)
             resources.create(version=1, **resource)
 
     def delete(self):

@@ -11,6 +11,7 @@ logger = logging.getLogger('converger')
 class Converger(process.MessageProcessor):
     def __init__(self):
         super(Converger, self).__init__('converger')
+        self.worker = Worker()
 
     def get_reality(self):
         """
@@ -85,7 +86,36 @@ class Converger(process.MessageProcessor):
                 possible_actions.append(res_name)
         return possible_actions
 
-    def worker(self, action, res_name):
+    @process.asynchronous
+    def converge(self, stack_name):
+        """
+        Main convergence process (this one can be embedded to heat-engine).
+        Its main purpose is to return tasks which are possible *right now*
+        and which will bring us a little closer to goal stack described in
+        template.
+        """
+        self.stack = stack.Stack.load_by_name(stack_name)
+        reality = self.get_reality()
+        goal = self.get_goal()
+        all_actions = self.get_diff(reality, goal)
+        possible_actions = self.get_possible_actions(all_actions)
+        for res_name in possible_actions:
+            # this part, instead of calling worker here, will add task to task
+            # queue. Worker process will consume it asynchronously.
+            self.worker.process(all_actions[res_name], res_name)
+
+        if len(possible_actions) > 1:
+            self.noop(len(possible_actions) - 1)
+        if len(possible_actions):
+            self.converge(stack_name)
+
+
+class Worker(process.MessageProcessor):
+    def __init__(self):
+        super(Worker, self).__init__('worker')
+
+    @process.asynchronous
+    def process(self, action, res_name):
         """
         Ideally this will be separate worker process. It will consume single
         task from queue and perform it.
@@ -107,20 +137,3 @@ class Converger(process.MessageProcessor):
                 properties=sres.properties,
                 name=res.data.name
             )
-
-    def converge(self, stack_name):
-        """
-        Main convergence process (this one can be embedded to heat-engine).
-        Its main purpose is to return tasks which are possible *right now*
-        and which will bring us a little closer to goal stack described in
-        template.
-        """
-        self.stack = stack.Stack.load_by_name(stack_name)
-        reality = self.get_reality()
-        goal = self.get_goal()
-        all_actions = self.get_diff(reality, goal)
-        possible_actions = self.get_possible_actions(all_actions)
-        for res_name in possible_actions:
-            # this part, instead of calling worker here, will add task to task
-            # queue. Worker process will consume it asynchronously.
-            self.worker(all_actions[res_name], res_name)

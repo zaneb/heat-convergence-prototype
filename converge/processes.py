@@ -18,7 +18,7 @@ class Processes(object):
         engine = Engine()
         converger = Converger()
 
-        event_loop = EventLoop(engine, converger)
+        event_loop = EventLoop(engine, converger, converger.worker)
 
         self.engine = engine
         self.converger = converger

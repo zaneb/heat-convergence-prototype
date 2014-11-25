@@ -1,115 +1,3 @@
-def validate_delete():
-    res_ds = get_datastore("Resource")
-    test.assertEqual(
-        len(res_ds._store),
-        0,
-    )
-
-
-def validate_update():
-    res_ds = get_datastore("Resource")
-    test.assertEqual(
-        dict(res_ds.dump()),
-        {0: {'key': 0,
-             'name': 'A',
-             'phys_id': 'A_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         1: {'key': 1,
-             'name': 'B',
-             'phys_id': 'B_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         2: {'key': 2,
-             'name': 'C',
-             'phys_id': 'C_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'a': '4alpha'},
-             },
-         3: {'key': 3,
-             'name': 'E',
-             'phys_id': 'E_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [{'resource': 'C', 'version': 1}],
-             'properties': {'ca': '4alpha'},
-             },
-         4: {'key': 4,
-             'name': 'D',
-             'phys_id': 'D_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
-             },
-         5: {'key': 5,
-             'name': 'F',
-             'phys_id': 'F_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             }
-         }
-    )
-
-
-def validate_create():
-    res_ds = get_datastore("Resource")
-    test.assertEqual(
-        dict(res_ds.dump()),
-        {0: {'key': 0,
-             'name': 'A',
-             'phys_id': 'A_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         1: {'key': 1,
-             'name': 'B',
-             'phys_id': 'B_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {},
-             },
-         2: {'key': 2,
-             'name': 'C',
-             'phys_id': 'C_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'a': '4alpha'},
-             },
-         3: {'key': 3,
-             'name': 'E',
-             'phys_id': 'E_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [{'resource': 'C', 'version': 1}],
-             'properties': {'ca': '4alpha'},
-             },
-         4: {'key': 4,
-             'name': 'D',
-             'phys_id': 'D_phys_id',
-             'state': 'COMPLETE',
-             'version': 1,
-             'prop_refs': [],
-             'properties': {'c': 'C_phys_id'},
-             }
-         }
-    )
-
-
 example_template = Template({
     'C': RsrcDef({'a': '4alpha'}, ['B']),
     'D': RsrcDef({'c': GetRes('C')}, ['C', 'E']),
@@ -118,8 +6,8 @@ example_template = Template({
     'B': RsrcDef({}, ['A']),
 })
 engine.create_stack('basic_update_delete', example_template)
-engine.converge('basic_update_delete', 5)
-engine.validate(validate_create)
+engine.noop(5)
+engine.call(verify, example_template)
 
 example_template2 = Template({
     'C': RsrcDef({'a': '4alpha'}, ['B']),
@@ -130,8 +18,8 @@ example_template2 = Template({
     'F': RsrcDef({}, ['D', 'E'])
 })
 engine.update_stack('basic_update_delete', example_template2)
-engine.converge('basic_update_delete', 4)
-engine.validate(validate_update)
+engine.noop(4)
+engine.call(verify, example_template2)
 engine.delete_stack('basic_update_delete')
-engine.converge('basic_update_delete', 6)
-engine.validate(validate_delete)
+engine.noop(6)
+engine.call(verify, Template({}))
