@@ -25,3 +25,8 @@ class Engine(process.MessageProcessor):
     def delete_stack(self, stack_name):
         existing_stack = stack.Stack.load_by_name(stack_name)
         existing_stack.delete()
+
+    @process.asynchronous
+    def rollback_stack(self, stack_name):
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.rollback()

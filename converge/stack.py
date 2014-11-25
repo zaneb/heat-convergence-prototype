@@ -29,7 +29,7 @@ class Stack(object):
     @classmethod
     def load(cls, key):
         s = stacks.read(key)
-        return cls(s.name, template.Template.load(s.tmpl_key),
+        return cls(s.name, template.Template.load(s.tmpl_key), s.prev_tmpl_key,
                    key=s.key)
 
     @classmethod
@@ -94,6 +94,25 @@ class Stack(object):
         logger.info('[%s(%d)] Deleting...' % (self.data['name'], self.key))
         self._create_or_update(old_tmpl.key)
 
+    def rollback(self):
+        old_tmpl_key = self.data['prev_tmpl_key']
+        if old_tmpl_key == self.tmpl.key:
+            # Nothing to roll back
+            return
+
+        if old_tmpl_key is None:
+            self.tmpl = template.Template()
+        else:
+            self.tmpl = template.Template.load(old_tmpl_key)
+
+        current_tmpl_key = self.data['tmpl_key']
+        self.data['tmpl_key'] = old_tmpl_key
+
+        logger.info('[%s(%d)] Rolling back to template %s',
+                    self.data['name'], self.key, old_tmpl_key)
+
+        self._create_or_update(current_tmpl_key)
+
     def _create_or_update(self, current_tmpl_key=None):
         self.store()
 
@@ -103,35 +122,47 @@ class Stack(object):
                                                     self.key,
                                                     tmpl_deps.graph()))
 
-        def is_fresh(rsrc):
-            return rsrc.template_key == current_tmpl_key
-
         ext_rsrcs = set(resource.Resource.load_all_from_stack(self))
-        rsrcs = {r.name: r for r in ext_rsrcs if is_fresh(r) and
-                                                 r.name in definitions}
 
         def key(r):
             return resource.GraphKey(r, rsrcs[r].key)
 
-        def store_resource(name):
-            requirers = (key(r) for r in tmpl_deps.required_by(name))
-            rsrc = resource.Resource(rsrc_name, self, definitions[name],
-                                     self.tmpl.key, set(requirers))
-            rsrc.store()
+        def best_existing_resource(rsrc_name):
+            candidate = None
+
+            for rsrc in ext_rsrcs:
+                if rsrc.name != rsrc_name:
+                    continue
+
+                if rsrc.template_key == self.tmpl.key:
+                    return rsrc
+                elif rsrc.template_key == current_tmpl_key:
+                    candidate = rsrc
+
+            return candidate
+
+        def get_resource(rsrc_name):
+            rsrc = best_existing_resource(rsrc_name)
+            if rsrc is None:
+                rsrc = resource.Resource(rsrc_name, self,
+                                         definitions[rsrc_name], self.tmpl.key)
+
+            rqrs = set(key(r) for r in tmpl_deps.required_by(rsrc_name))
+            rsrc.requirers = rsrc.requirers | rqrs
+
             return rsrc
 
+        rsrcs = {}
         for rsrc_name in reversed(tmpl_deps):
-            if rsrc_name not in rsrcs:
-                rsrcs[rsrc_name] = store_resource(rsrc_name)
-            else:
-                rsrc = rsrcs[rsrc_name]
-                rsrc.requirers |= set(key(r) for r in
-                        tmpl_deps.required_by(rsrc.name))
-                rsrc.store()
+            rsrc = get_resource(rsrc_name)
+            rsrc.store()
+            rsrcs[rsrc_name] = rsrc
 
         dependencies = self._dependencies({resource.GraphKey(r.name, r.key): r
                                                for r in ext_rsrcs},
                                           tmpl_deps, rsrcs)
+
+        list(dependencies)  # Check for circular deps
 
         from . import processes
         for graph_key, forward in dependencies.leaves():
