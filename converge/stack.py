@@ -14,6 +14,7 @@ stack_resources = datastore.Datastore(
     'name',
     'properties',
     'depends_on',
+    'replacement_of',
     'stack',
     'state',
 )
@@ -76,6 +77,7 @@ class Stack(object):
                 'depends_on': res_def.depends_on,
                 'properties': res_def.properties,
                 'state': 'COMPLETE',
+                'replacement_of': res_def.replacement_of,
             })
 
     def update(self, tmpl):

@@ -106,6 +106,13 @@ class Resource(object):
             res = get_stack_resource_by_name(resource_name)
             if res_name in res.depends_on and res.state != "DELETE":
                 return False
+            try:
+                res_real = Resource.get_by_name(resource_name)
+            except StopIteration:
+                pass
+            else:
+                if res.replacement_of == res_name and res_real.state != "COMPLETE":
+                    return False
         return True
 
     @staticmethod

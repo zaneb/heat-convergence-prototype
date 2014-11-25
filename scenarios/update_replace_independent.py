@@ -70,7 +70,7 @@ def validate_update():
              'phys_id': 'E_phys_id',
              'properties': {'ca': 'updated'},
              'state': 'COMPLETE',
-             'version': 1,
+             'version': 2,
              'prop_refs': [{'resource': 'C', 'version': 2}],
              },
          4: {'key': 4,
@@ -86,9 +86,10 @@ def validate_update():
              'phys_id': 'A2_phys_id',
              'properties': {'a': 'updated'},
              'state': 'COMPLETE',
-             'version': 2,
+             'version': 1,
              'prop_refs': [],
-             },}
+             },
+         }
     )
 
 
