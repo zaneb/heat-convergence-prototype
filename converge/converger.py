@@ -1,7 +1,11 @@
+import logging
 
 from .framework import process
 from . import resource
 from . import stack
+
+
+logger = logging.getLogger('converger')
 
 
 class Converger(process.MessageProcessor):

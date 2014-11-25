@@ -1,7 +1,7 @@
 
 def validate_create():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',
@@ -50,7 +50,7 @@ def validate_create():
 
 def validate_update_long():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',
@@ -107,7 +107,7 @@ def validate_update_long():
 
 def validate_update_shrunk():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',

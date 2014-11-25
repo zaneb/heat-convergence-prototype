@@ -1,7 +1,7 @@
 
 def validate_create_add():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',

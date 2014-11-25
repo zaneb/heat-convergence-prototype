@@ -1,6 +1,6 @@
 def validate_delete():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         len(res_ds._store),
         0,
     )
@@ -8,7 +8,7 @@ def validate_delete():
 
 def validate_update():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',
@@ -64,7 +64,7 @@ def validate_update():
 
 def validate_create():
     res_ds = get_datastore("Resource")
-    test.testcase.assertEqual(
+    test.assertEqual(
         dict(res_ds.dump()),
         {0: {'key': 0,
              'name': 'A',

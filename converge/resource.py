@@ -1,4 +1,7 @@
+import logging
+
 from .framework import datastore
+from . import reality
 from .stack import stack_resources, get_stack_resource_by_name
 from .template import GetAtt, GetRes
 
