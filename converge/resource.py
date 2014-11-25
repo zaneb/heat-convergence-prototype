@@ -78,6 +78,7 @@ class Resource(object):
         if not Resource.check_delete_readiness(self.data.name):
             resources.update(key=self.key, state="ERROR")
             return
+        reality.reality.delete_resource(self.data.phys_id)
         resources.delete(self.key)
         stack_res = get_stack_resource_by_name(self.data.name)
         stack_resources.update(key=stack_res.key, state="DELETE")
