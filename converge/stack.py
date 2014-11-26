@@ -74,7 +74,7 @@ class Stack(object):
             stack_resources.create(**{
                 'name': res_name,
                 'stack': self.key,
-                'depends_on': res_def.depends_on,
+                'depends_on': list(res_def.dependency_names()),
                 'properties': res_def.properties,
                 'state': 'COMPLETE',
                 'replacement_of': res_def.replacement_of,
