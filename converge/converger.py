@@ -48,7 +48,8 @@ class Converger(process.MessageProcessor):
         graph = deps.graph()
 
         if forward:
-            if rsrc.replaced_by and rsrc.template_key != template_key:
+            if (rsrc.replaced_by is not None and
+                    rsrc.template_key != template_key):
                 return
 
             try:
@@ -67,7 +68,7 @@ class Converger(process.MessageProcessor):
 
 
         graph_key = (resource_key, forward)
-        if graph_key not in graph and rsrc.replaces:
+        if graph_key not in graph and rsrc.replaces is not None:
             graph_key = (resource.GraphKey(rsrc.name, rsrc.replaces),
                          forward)
 
