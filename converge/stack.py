@@ -10,17 +10,20 @@ from . import template
 logger = logging.getLogger('stack')
 
 stacks = datastore.Datastore('Stack',
-                             'key', 'name', 'tmpl_key', 'prev_tmpl_key')
+                             'key', 'name', 'tmpl_key', 'prev_tmpl_key',
+                             'current_traversal')
 
 
 class Stack(object):
-    def __init__(self, name, tmpl, prev_tmpl_key=None, key=None):
+    def __init__(self, name, tmpl, prev_tmpl_key=None, current_traversal=0,
+                 key=None):
         self.key = key
         self.tmpl = tmpl
         self.data = {
             'name': name,
             'tmpl_key': tmpl.key,
             'prev_tmpl_key': prev_tmpl_key,
+            'current_traversal': current_traversal,
         }
 
     def __str__(self):
@@ -30,7 +33,7 @@ class Stack(object):
     def load(cls, key):
         s = stacks.read(key)
         return cls(s.name, template.Template.load(s.tmpl_key), s.prev_tmpl_key,
-                   key=s.key)
+                   s.current_traversal, key=s.key)
 
     @classmethod
     def load_by_name(cls, stack_name):
@@ -48,7 +51,7 @@ class Stack(object):
 
     @property
     def current_traversal(self):
-        return self.data['tmpl_key']
+        return self.data['current_traversal']
 
     def create(self):
         self.store()
@@ -115,6 +118,7 @@ class Stack(object):
         self._create_or_update(current_tmpl_key)
 
     def _create_or_update(self, current_tmpl_key=None):
+        self.data['current_traversal'] += 1
         self.store()
 
         definitions = self.tmpl.resources
