@@ -46,6 +46,10 @@ class Stack(object):
         else:
             stacks.update(self.key, **self.data)
 
+    @property
+    def current_traversal(self):
+        return self.data['tmpl_key']
+
     def create(self):
         self.store()
         self._create_or_update()
@@ -163,19 +167,21 @@ class Stack(object):
 
         from . import processes
         for graph_key, forward in dependencies.leaves():
-            processes.converger.check_resource(graph_key, self.tmpl.key,
+            processes.converger.check_resource(graph_key,
+                                               self.current_traversal,
                                                {}, dependencies, forward)
 
-    def mark_complete(self, template_key):
-        if template_key != self.tmpl.key:
+    def mark_complete(self, traversal_id):
+        if traversal_id != self.current_traversal:
             return
 
-        logger.info('[%s(%d)] update to template %d complete',
-                    self.data['name'], self.key, template_key)
+        logger.info('[%s(%d)] update traversal %d complete',
+                    self.data['name'], self.key, traversal_id)
 
         prev_prev_key = self.data['prev_tmpl_key']
-        self.data['prev_tmpl_key'] = template_key
+        self.data['prev_tmpl_key'] = self.data['tmpl_key']
         self.store()
 
-        if prev_prev_key is not None and prev_prev_key != template_key:
+        if (prev_prev_key is not None and
+                prev_prev_key != self.data['tmpl_key']):
             template.templates.delete(prev_prev_key)
