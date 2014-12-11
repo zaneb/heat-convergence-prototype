@@ -173,7 +173,8 @@ class Stack(object):
         for graph_key, forward in dependencies.leaves():
             processes.converger.check_resource(graph_key,
                                                self.current_traversal,
-                                               {}, dependencies, forward)
+                                               {}, tuple(dependencies.edges()),
+                                               forward)
 
     def mark_complete(self, traversal_id):
         if traversal_id != self.current_traversal:

@@ -3,6 +3,7 @@ import logging
 from .framework import datastore
 from .framework import process
 
+from . import dependencies
 from . import resource
 from . import sync_point
 from . import template
@@ -33,7 +34,7 @@ class Converger(process.MessageProcessor):
             rsrc.delete()
 
     @process.asynchronous
-    def check_resource(self, resource_key, traversal_id, data, deps,
+    def check_resource(self, resource_key, traversal_id, data, dep_edges,
                        forward):
         try:
             rsrc = resource.Resource.load(resource_key.key)
@@ -45,6 +46,7 @@ class Converger(process.MessageProcessor):
             logger.debug('[%s] Traversal cancelled; stopping.', traversal_id)
             return
 
+        deps = dependencies.Dependencies(dep_edges)
         graph = deps.graph()
 
         if forward:
@@ -58,7 +60,7 @@ class Converger(process.MessageProcessor):
                 replacement = rsrc.create_replacement(tmpl.key, data)
                 self.check_resource(resource.GraphKey(replacement.name,
                                                       replacement.key),
-                                    traversal_id, data, deps, True)
+                                    traversal_id, data, dep_edges, True)
                 return
 
             input_data = resource.InputData(rsrc.key,
@@ -77,7 +79,7 @@ class Converger(process.MessageProcessor):
                                           set(graph[(req, fwd)]),
                                           graph_key,
                                           input_data if fwd else rsrc.key,
-                                          deps, fwd)
+                                          dep_edges, fwd)
 
         if forward:
             self.check_stack_complete(rsrc.stack, traversal_id, resource_key,
@@ -99,12 +101,13 @@ class Converger(process.MessageProcessor):
 
     def propagate_check_resource(self, next_res_graph_key, traversal_id,
                                  predecessors, sender, sender_data,
-                                 deps, forward):
+                                 dep_edges, forward):
         key = '%s-%s-%s' % (next_res_graph_key.key, traversal_id,
                             'update' if forward else 'cleanup')
 
         def do_check(target_key, data):
-            self.check_resource(target_key, traversal_id, data, deps, forward)
+            self.check_resource(target_key, traversal_id, data, dep_edges,
+                                forward)
 
         sync_point.sync(key, do_check, next_res_graph_key, predecessors,
                         {sender: sender_data})
