@@ -64,9 +64,6 @@ class Resource(object):
         stored = resources.find(stack_key=stack.key)
         return (cls._load_from_store(key, lambda sk: stack) for key in stored)
 
-    def graph_key(self, forward=True):
-        return GraphKey(self.name, self.key, forward)
-
     def store(self):
         data = {
             'name': self.name,
