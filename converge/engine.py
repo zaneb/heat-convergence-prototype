@@ -4,6 +4,10 @@ from . import template
 
 
 class Engine(process.MessageProcessor):
+    '''
+    The message handler for requests coming from the user.
+    '''
+
     def __init__(self):
         super(Engine, self).__init__('engine')
 

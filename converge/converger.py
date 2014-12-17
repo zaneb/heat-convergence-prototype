@@ -13,10 +13,17 @@ logger = logging.getLogger('converger')
 
 
 class Converger(process.MessageProcessor):
+    '''
+    The message handler for asynchronous notifications within Heat.
+    '''
+
     def __init__(self):
         super(Converger, self).__init__('converger')
 
     def check_resource_update(self, rsrc, template_key, data):
+        '''
+        Create or update the Resource if appropriate.
+        '''
         rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
 
         input_data = {key.name: in_data for (key, fwd), in_data in data.items()}
@@ -27,6 +34,10 @@ class Converger(process.MessageProcessor):
             rsrc.update(template_key, input_data)
 
     def check_resource_cleanup(self, rsrc, template_key, data):
+        '''
+        Delete the Resource if appropriate.
+        '''
+        # Clear out deleted resources from the requirers list
         rsrc.clear_requirers(rsrc_key for rsrc_key, key in data.items()
                                     if key is None)
 
@@ -36,6 +47,12 @@ class Converger(process.MessageProcessor):
     @process.asynchronous
     def check_resource(self, resource_key, traversal_id, data, dep_edges,
                        forward):
+        '''
+        Process a node in the dependency graph.
+
+        The node may be associated with either an update or a cleanup of its
+        associated resource.
+        '''
         try:
             rsrc = resource.Resource.load(resource_key.key)
         except resource.resources.NotFound:
@@ -57,12 +74,14 @@ class Converger(process.MessageProcessor):
             try:
                 self.check_resource_update(rsrc, tmpl.key, data)
             except resource.UpdateReplace:
-                replacement = rsrc.create_replacement(tmpl.key, data)
+                replacement = rsrc.make_replacement(tmpl.key, data)
                 self.check_resource(resource.GraphKey(replacement.name,
                                                       replacement.key),
                                     traversal_id, data, dep_edges, True)
                 return
 
+            # We'll pass on this data so that subsequent resources can update
+            # their dependencies and their get_resource and getattr values.
             input_data = resource.InputData(rsrc.key,
                                             rsrc.refid(), rsrc.attributes())
         else:
@@ -71,6 +90,12 @@ class Converger(process.MessageProcessor):
 
         graph_key = (resource_key, forward)
         if graph_key not in graph and rsrc.replaces is not None:
+            # If we are a replacement, impersonate the replaced resource for
+            # the purposes of calculating whether subsequent resources are
+            # ready, since everybody has to work from the same version of the
+            # graph. Our real resource ID is sent in the input_data, so the
+            # dependencies will get updated to point to this resource in time
+            # for the next traversal.
             graph_key = (resource.GraphKey(rsrc.name, rsrc.replaces),
                          forward)
 
@@ -86,6 +111,12 @@ class Converger(process.MessageProcessor):
                                       graph)
 
     def check_stack_complete(self, stack, traversal_id, sender, graph):
+        '''
+        Mark the stack complete if the update is complete.
+
+        Complete is currently in the sense that all desired resources are in
+        service, not that superfluous ones have been cleaned up.
+        '''
         roots = set(key for (key, fwd), node in graph.items()
                         if fwd and not any(f for k, f in node.required_by()))
 
@@ -102,6 +133,9 @@ class Converger(process.MessageProcessor):
     def propagate_check_resource(self, next_res_graph_key, traversal_id,
                                  predecessors, sender, sender_data,
                                  dep_edges, forward):
+        '''
+        Trigger processing of a node iff all of its dependencies are satisfied.
+        '''
         key = '%s-%s-%s' % (next_res_graph_key.key, traversal_id,
                             'update' if forward else 'cleanup')
 

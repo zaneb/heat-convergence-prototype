@@ -22,6 +22,12 @@ class UpdateReplace(Exception):
 
 
 class Resource(object):
+    '''
+    Class to represent a Resource.
+
+    This is the equivalent of the heat.engine.resource.Resource class in this
+    simulation.
+    '''
     def __init__(self, name, stack, defn, template_key=None,
                  requirers=set(), requirements=set(),
                  replaces=None, replaced_by=None,
@@ -127,7 +133,7 @@ class Resource(object):
                                                  self.props_data))
         self.store()
 
-    def create_replacement(self, template_key, resource_data):
+    def make_replacement(self, template_key, resource_data):
         rsrc = Resource(self.name, self.stack,
                         self.defn, template_key,
                         requirers=self.requirers, replaces=self.key)
