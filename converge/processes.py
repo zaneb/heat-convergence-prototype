@@ -24,5 +24,9 @@ class Processes(object):
         self.converger = converger
         self.event_loop = event_loop
 
+    def set_debugger(self, debugger):
+        self.engine.set_debugger(debugger)
+        self.converger.set_debugger(debugger)
+
 
 Processes()

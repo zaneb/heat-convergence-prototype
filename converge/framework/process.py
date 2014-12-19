@@ -2,11 +2,25 @@ import collections
 import functools
 import inspect
 import logging
+import sys
 
+from . import debug
 from . import message_queue
 
 
 logger = logging.getLogger('event')
+
+_breakpoint_candidates = []
+
+
+def _set_breakpoint(debugger, function):
+    if function.__module__ != __name__:
+        code = function.__code__
+        fn = code.co_filename
+        line = code.co_firstlineno
+
+        if not debugger.get_breaks(fn, line):
+            debugger.set_break(fn, line, funcname=code.co_name)
 
 
 def asynchronous(function):
@@ -19,11 +33,16 @@ def asynchronous(function):
     arg_names = inspect.getargspec(function).args
     MessageData = collections.namedtuple(function.__name__, arg_names[1:])
 
+    if function not in _breakpoint_candidates:
+        _breakpoint_candidates.append(function)
+
     @functools.wraps(function)
     def call_or_send(processor, *args, **kwargs):
         if len(args) == 1 and not kwargs and isinstance(args[0], MessageData):
             try:
                 return function(processor, **args[0]._asdict())
+            except debug.Quit:
+                raise
             except Exception as exc:
                 logger.exception('[%s] Exception in "%s": %s',
                                  processor.name, function.__name__, exc)
@@ -39,9 +58,16 @@ def asynchronous(function):
 
 
 class MessageProcessor(object):
+
     def __init__(self, name):
         self.name = name
         self.queue = message_queue.MessageQueue(name)
+        self.debugger = None
+
+    def set_debugger(self, debugger):
+        self.debugger = debugger
+        for bp_func in _breakpoint_candidates:
+            _set_breakpoint(debugger, bp_func)
 
     def __call__(self):
         message = self.queue.get()
@@ -89,3 +115,6 @@ class MessageProcessor(object):
         Insert a function call in the message queue.
         '''
         self._execute(functools.partial(func, *args, **kwargs))
+
+
+__all__ = ['MessageProcessor', 'asynchronous']
