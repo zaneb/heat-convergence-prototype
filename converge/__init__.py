@@ -2,8 +2,10 @@
 An OpenStack Heat convergence algorithm simulator.
 '''
 
+import bdb
 import functools
 import logging
+import sys
 
 from . import testutils
 
@@ -40,7 +42,6 @@ def scenario_globals(procs, testcase=testutils.DummyTestCase()):
 
 
 def cli_options():
-    import sys
     from optparse import OptionParser
 
     parser = OptionParser(prog='%s -m %s' % (sys.executable, __name__),
@@ -49,8 +50,11 @@ def cli_options():
     parser.add_option('-d', '--scenario-directory', dest='directory',
                       action='store', default='scenarios', metavar='DIR',
                       help='Directory to read scenarios from')
+    parser.add_option('-p', '--pdb', dest='debug', action='store_true',
+                      help='Enable debugging with pdb')
 
     return parser.parse_args()
+
 
 
 def main(config=None):
@@ -65,6 +69,7 @@ def main(config=None):
 
     from . import processes
     from .framework import datastore
+    from .framework import debug
     from .framework import scenario
 
     def include_scenario(name):
@@ -74,9 +79,14 @@ def main(config=None):
         if not include_scenario(runner.name):
             continue
 
+        procs = processes.Processes()
+
         try:
-            procs = processes.Processes()
-            runner(procs.event_loop, **scenario_globals(procs))
+            with debug.debugger(options.debug, procs):
+                runner(procs.event_loop, **scenario_globals(procs))
+        except KeyboardInterrupt:
+            print('')
+            sys.exit(0)
         except Exception as exc:
             logger.exception('Exception in scenario "%s"', runner.name)
         finally:
