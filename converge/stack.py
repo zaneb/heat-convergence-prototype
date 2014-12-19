@@ -12,7 +12,7 @@ logger = logging.getLogger('stack')
 
 stacks = datastore.Datastore('Stack',
                              'key', 'name', 'tmpl_key', 'prev_tmpl_key',
-                             'current_traversal')
+                             'current_traversal', 'current_deps')
 
 
 class Stack(object):
@@ -24,7 +24,7 @@ class Stack(object):
     '''
 
     def __init__(self, name, tmpl, prev_tmpl_key=None, current_traversal=0,
-                 key=None):
+                 current_deps=tuple(), key=None):
         self.key = key
         self.tmpl = tmpl
         self.data = {
@@ -32,6 +32,7 @@ class Stack(object):
             'tmpl_key': tmpl.key,
             'prev_tmpl_key': prev_tmpl_key,
             'current_traversal': current_traversal,
+            'current_deps': current_deps,
         }
 
     def __str__(self):
@@ -41,7 +42,7 @@ class Stack(object):
     def load(cls, key):
         s = stacks.read(key)
         return cls(s.name, template.Template.load(s.tmpl_key), s.prev_tmpl_key,
-                   s.current_traversal, key=s.key)
+                   s.current_traversal, s.current_deps, key=s.key)
 
     @classmethod
     def load_by_name(cls, stack_name):
@@ -60,6 +61,10 @@ class Stack(object):
     @property
     def current_traversal(self):
         return self.data['current_traversal']
+
+    @property
+    def current_deps(self):
+        return dependencies.Dependencies(self.data['current_deps'])
 
     def create(self):
         self.store()
@@ -232,13 +237,15 @@ class Stack(object):
                           roots,
                           self.key)
 
+        self.data['current_deps'] = tuple(dependencies.edges())
+        self.store()
+
         # Start the traversal by sending notifications to the leaf nodes
         from . import processes
         for graph_key, forward in dependencies.leaves():
             processes.converger.check_resource(graph_key,
                                                self.current_traversal,
-                                               {}, tuple(dependencies.edges()),
-                                               forward)
+                                               {}, forward)
 
     def mark_complete(self, traversal_id):
         '''

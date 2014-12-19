@@ -45,8 +45,7 @@ class Converger(process.MessageProcessor):
             rsrc.delete()
 
     @process.asynchronous
-    def check_resource(self, resource_key, traversal_id, data, dep_edges,
-                       forward):
+    def check_resource(self, resource_key, traversal_id, data, forward):
         '''
         Process a node in the dependency graph.
 
@@ -63,7 +62,7 @@ class Converger(process.MessageProcessor):
             logger.debug('[%s] Traversal cancelled; stopping.', traversal_id)
             return
 
-        deps = dependencies.Dependencies(dep_edges)
+        deps = rsrc.stack.current_deps
         graph = deps.graph()
 
         if forward:
@@ -77,7 +76,7 @@ class Converger(process.MessageProcessor):
                 replacement = rsrc.make_replacement(tmpl.key, data)
                 self.check_resource(resource.GraphKey(replacement.name,
                                                       replacement.key),
-                                    traversal_id, data, dep_edges, True)
+                                    traversal_id, data, True)
                 return
 
             # We'll pass on this data so that subsequent resources can update
@@ -105,7 +104,7 @@ class Converger(process.MessageProcessor):
                                               set(graph[(req, fwd)]),
                                               graph_key,
                                               input_data if fwd else rsrc.key,
-                                              dep_edges, fwd)
+                                              fwd)
 
             if forward:
                 self.check_stack_complete(rsrc.stack, traversal_id,
@@ -136,8 +135,7 @@ class Converger(process.MessageProcessor):
         sync_point.sync(key, mark_complete, stack.key, roots, {sender: None})
 
     def propagate_check_resource(self, next_res_graph_key, traversal_id,
-                                 predecessors, sender, sender_data,
-                                 dep_edges, forward):
+                                 predecessors, sender, sender_data, forward):
         '''
         Trigger processing of a node iff all of its dependencies are satisfied.
         '''
@@ -145,8 +143,7 @@ class Converger(process.MessageProcessor):
                                   'update' if forward else 'cleanup')
 
         def do_check(target_key, data):
-            self.check_resource(target_key, traversal_id, data, dep_edges,
-                                forward)
+            self.check_resource(target_key, traversal_id, data, forward)
 
         sync_point.sync(key, do_check, next_res_graph_key, predecessors,
                         {sender: sender_data})
