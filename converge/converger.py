@@ -123,7 +123,7 @@ class Converger(process.MessageProcessor):
         if sender not in roots:
             return
 
-        key = '%s-%s' % (stack.key, traversal_id)
+        key = sync_point.make_key(stack.key, traversal_id)
 
         def mark_complete(stack_key, data):
             stack.mark_complete(traversal_id)
@@ -136,8 +136,8 @@ class Converger(process.MessageProcessor):
         '''
         Trigger processing of a node iff all of its dependencies are satisfied.
         '''
-        key = '%s-%s-%s' % (next_res_graph_key.key, traversal_id,
-                            'update' if forward else 'cleanup')
+        key = sync_point.make_key(next_res_graph_key.key, traversal_id,
+                                  'update' if forward else 'cleanup')
 
         def do_check(target_key, data):
             self.check_resource(target_key, traversal_id, data, dep_edges,

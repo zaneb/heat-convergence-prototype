@@ -6,8 +6,18 @@ from .framework import datastore
 logger = logging.getLogger('sync_point')
 
 sync_points = datastore.Datastore('SyncPoint',
-                                  'key', 'predecessors', 'satisfied')
+                                  'key', 'waiting', 'satisfied')
 
+KEY_SEPARATOR = ':'
+
+
+def _dump_list(items, separator=', '):
+    return separator.join(map(str, items))
+
+
+def make_key(*components):
+    assert len(components) >= 2
+    return _dump_list(components, KEY_SEPARATOR)
 
 def sync(key, propagate, target, predecessors, new_data):
     if set(new_data).issuperset(predecessors):
@@ -39,3 +49,6 @@ def sync(key, propagate, target, predecessors, new_data):
                          key, target, set(satisfied), predecessors)
             sync_points.update(key, predecessors=predecessors,
                                satisfied=satisfied)
+
+
+__all__ = ['make_key', 'sync']
