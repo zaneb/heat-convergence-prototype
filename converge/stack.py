@@ -4,6 +4,7 @@ from .framework import datastore
 
 from . import dependencies
 from . import resource
+from . import sync_point
 from . import template
 
 
@@ -209,8 +210,21 @@ class Stack(object):
         dependencies = self._dependencies({resource.GraphKey(r.name, r.key): r
                                                for r in ext_rsrcs},
                                           tmpl_deps, rsrcs)
+        graph = dependencies.graph()
 
-        list(dependencies)  # Check for circular deps
+        # Create SyncPoints to measure progress
+        for resource_key, forward in dependencies:
+            sync_point.create(sync_point.make_key(resource_key.key,
+                                                  self.current_traversal,
+                                                  'update' if forward
+                                                           else 'cleanup'),
+                              set(graph[resource_key, forward]))
+
+        roots = set(key for (key, fwd), node in graph.items()
+                        if fwd and not any(f for k, f in node.required_by()))
+        sync_point.create(sync_point.make_key(self.key,
+                                              self.current_traversal),
+                          roots)
 
         # Start the traversal by sending notifications to the leaf nodes
         from . import processes
