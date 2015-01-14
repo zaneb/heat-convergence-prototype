@@ -99,16 +99,21 @@ class Converger(process.MessageProcessor):
             graph_key = (resource.GraphKey(rsrc.name, rsrc.replaces),
                          forward)
 
-        for req, fwd in deps.required_by(graph_key):
-            self.propagate_check_resource(req, traversal_id,
-                                          set(graph[(req, fwd)]),
-                                          graph_key,
-                                          input_data if fwd else rsrc.key,
-                                          dep_edges, fwd)
+        try:
+            for req, fwd in deps.required_by(graph_key):
+                self.propagate_check_resource(req, traversal_id,
+                                              set(graph[(req, fwd)]),
+                                              graph_key,
+                                              input_data if fwd else rsrc.key,
+                                              dep_edges, fwd)
 
-        if forward:
-            self.check_stack_complete(rsrc.stack, traversal_id, resource_key,
-                                      graph)
+            if forward:
+                self.check_stack_complete(rsrc.stack, traversal_id,
+                                          resource_key, graph)
+        except sync_point.sync_points.NotFound:
+            # Note: this cannot actually happen in the current test framework
+            # TODO: retrigger this resource in current traversal
+            pass
 
     def check_stack_complete(self, stack, traversal_id, sender, graph):
         '''

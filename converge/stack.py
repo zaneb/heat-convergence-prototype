@@ -148,8 +148,12 @@ class Stack(object):
         Create and Delete are special cases of Update, where the previous or
         new templates (respectively) are empty.
         '''
+
+        previous_traversal = self.current_traversal
         self.data['current_traversal'] += 1
         self.store()
+
+        sync_point.delete_all(self.key, previous_traversal)
 
         definitions = self.tmpl.resources
         tmpl_deps = self.tmpl.dependencies()
@@ -218,13 +222,15 @@ class Stack(object):
                                                   self.current_traversal,
                                                   'update' if forward
                                                            else 'cleanup'),
-                              set(graph[resource_key, forward]))
+                              set(graph[resource_key, forward]),
+                              self.key)
 
         roots = set(key for (key, fwd), node in graph.items()
                         if fwd and not any(f for k, f in node.required_by()))
         sync_point.create(sync_point.make_key(self.key,
                                               self.current_traversal),
-                          roots)
+                          roots,
+                          self.key)
 
         # Start the traversal by sending notifications to the leaf nodes
         from . import processes
