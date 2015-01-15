@@ -78,13 +78,18 @@ class Converger(process.MessageProcessor):
                                                       replacement.key),
                                     traversal_id, data, True)
                 return
+            except resource.UpdateInProgress:
+                return
 
             # We'll pass on this data so that subsequent resources can update
             # their dependencies and their get_resource and getattr values.
             input_data = resource.InputData(rsrc.key,
                                             rsrc.refid(), rsrc.attributes())
         else:
-            self.check_resource_cleanup(rsrc, tmpl.key, data)
+            try:
+                self.check_resource_cleanup(rsrc, tmpl.key, data)
+            except resource.UpdateInProgress:
+                return
 
 
         graph_key = (resource_key, forward)
@@ -111,8 +116,19 @@ class Converger(process.MessageProcessor):
                                           resource_key, graph)
         except sync_point.sync_points.NotFound:
             # Note: this cannot actually happen in the current test framework
-            # TODO: retrigger this resource in current traversal
-            pass
+            stack = rsrc.stack.load(rsrc.stack.key)
+
+            key = sync_point.make_key(resource_key, stack.current_traversal,
+                                      'update' if forward else 'cleanup')
+            def do_check(target_key, data):
+                self.check_resource(resource_key, stack.current_traversal,
+                                    data)
+
+            try:
+                sync_point.sync(key, do_check, resource_key, predecessors,
+                                {})
+            except sync_point.sync_points.NotFound:
+                pass
 
     def check_stack_complete(self, stack, traversal_id, sender, graph):
         '''

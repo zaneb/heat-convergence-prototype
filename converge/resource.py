@@ -25,6 +25,10 @@ class UpdateReplace(Exception):
     pass
 
 
+class UpdateInProgress(Exception):
+    pass
+
+
 class Resource(object):
     '''
     Class to represent a Resource.
@@ -134,6 +138,10 @@ class Resource(object):
                                                             self.key))
                 raise UpdateReplace
 
+        if self.status == IN_PROGRESS:
+            logger.info('[%s(%d)] Previous update still in progress')
+            raise UpdateInProgress
+
         logger.info('[%s(%d)] Updating in place' % (self.name,
                                                     self.key))
         self.status = IN_PROGRESS
@@ -167,6 +175,10 @@ class Resource(object):
         self.store()
 
     def delete(self):
+        if self.status == IN_PROGRESS:
+            logger.info('[%s(%d)] Previous update still in progress')
+            raise UpdateInProgress
+
         self.status = IN_PROGRESS
         self.store()  # Note: must be atomic update
 
