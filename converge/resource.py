@@ -14,7 +14,11 @@ resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
                                 'requirers', 'requirements',
                                 'replaces', 'replaced_by',
-                                'props_data', 'phys_id')
+                                'props_data', 'phys_id',
+                                'status')
+
+
+STATUSES = (COMPLETE, IN_PROGRESS) = ('COMPLETE', 'IN_PROGRESS')
 
 
 class UpdateReplace(Exception):
@@ -32,6 +36,7 @@ class Resource(object):
                  requirers=set(), requirements=set(),
                  replaces=None, replaced_by=None,
                  props_data=None, phys_id=None,
+                 status=COMPLETE,
                  key=None):
         self.key = key
         self.name = name
@@ -44,6 +49,7 @@ class Resource(object):
         self.replaced_by = replaced_by
         self.props_data = props_data
         self.physical_resource_id = phys_id
+        self.status = status
 
     @classmethod
     def _load_from_store(cls, key, get_stack):
@@ -57,6 +63,7 @@ class Resource(object):
                    loaded.replaced_by,
                    loaded.props_data,
                    loaded.phys_id,
+                   loaded.status,
                    loaded.key)
 
     @classmethod
@@ -81,6 +88,7 @@ class Resource(object):
             'replaced_by': self.replaced_by,
             'props_data': self.props_data,
             'phys_id': self.physical_resource_id,
+            'status': self.status,
         }
 
         if self.key is None:
@@ -96,6 +104,9 @@ class Resource(object):
         return self.props_data
 
     def create(self, template_key, resource_data):
+        self.status = IN_PROGRESS
+        self.store()  # Note: must be atomic update
+
         self.template_key = template_key
         self.requirements = set(GraphKey(k, d.key)
                                     for k, d in resource_data.items())
@@ -109,6 +120,7 @@ class Resource(object):
         logger.info('[%s(%d)] Properties: %s' % (self.name,
                                                  self.key,
                                                  self.props_data))
+        self.status = COMPLETE
         self.store()
 
     def update(self, template_key, resource_data):
@@ -122,6 +134,9 @@ class Resource(object):
 
         logger.info('[%s(%d)] Updating in place' % (self.name,
                                                     self.key))
+        self.status = IN_PROGRESS
+        self.store()  # Note: must be atomic update
+
         self.template_key = template_key
         self.requirements = set(GraphKey(k, d.key)
                                     for k, d in resource_data.items())
@@ -131,6 +146,7 @@ class Resource(object):
         logger.info('[%s(%d)] Properties: %s' % (self.name,
                                                  self.key,
                                                  self.props_data))
+        self.status = COMPLETE
         self.store()
 
     def make_replacement(self, template_key, resource_data):
@@ -149,6 +165,9 @@ class Resource(object):
         self.store()
 
     def delete(self):
+        self.status = IN_PROGRESS
+        self.store()  # Note: must be atomic update
+
         if self.physical_resource_id is not None:
             reality.reality.delete_resource(self.physical_resource_id)
         logger.info('[%s(%d)] Deleted %s' % (self.name,
