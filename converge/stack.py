@@ -227,14 +227,12 @@ class Stack(object):
                                                   self.current_traversal,
                                                   'update' if forward
                                                            else 'cleanup'),
-                              set(graph[resource_key, forward]),
                               self.key)
 
         roots = set(key for (key, fwd), node in graph.items()
                         if fwd and not any(f for k, f in node.required_by()))
         sync_point.create(sync_point.make_key(self.key,
                                               self.current_traversal),
-                          roots,
                           self.key)
 
         self.data['current_deps'] = tuple(dependencies.edges())

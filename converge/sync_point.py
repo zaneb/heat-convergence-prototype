@@ -7,7 +7,7 @@ from .framework import datastore
 logger = logging.getLogger('sync_point')
 
 sync_points = datastore.Datastore('SyncPoint',
-                                  'key', 'waiting', 'satisfied', 'stack_key')
+                                  'key', 'satisfied', 'stack_key')
 
 KEY_SEPARATOR = ':'
 
@@ -21,20 +21,18 @@ def make_key(*components):
     return _dump_list(components, KEY_SEPARATOR)
 
 
-def create(key, predecessors, stack_key):
-    sync_points.create_with_key(key, waiting=predecessors,
-                                satisfied={}, stack_key=stack_key)
+def create(key, stack_key):
+    sync_points.create_with_key(key, satisfied={}, stack_key=stack_key)
 
 
 def sync(key, propagate, target, predecessors, new_data):
     sync_point = sync_points.read(key)
     satisfied = dict(sync_point.satisfied)
     satisfied.update(new_data)
-    waiting = (predecessors | sync_point.waiting) - set(satisfied)
+    waiting = predecessors - set(satisfied)
 
     # Note: update must be atomic
-    sync_points.update(key, waiting=waiting,
-                       satisfied=satisfied)
+    sync_points.update(key, satisfied=satisfied)
 
     if waiting:
         logger.debug('[%s] Waiting %s: Got %s; still need %s',
