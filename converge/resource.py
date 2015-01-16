@@ -125,6 +125,8 @@ class Resource(object):
 
     def update(self, template_key, resource_data):
         new_props_data = self.defn.resolved_props(resource_data)
+        new_requirements = set(GraphKey(k, d.key)
+                                  for k, d in resource_data.items())
 
         for key, val in new_props_data.items():
             if val != self.props_data[key] and '!' in key:
@@ -135,11 +137,11 @@ class Resource(object):
         logger.info('[%s(%d)] Updating in place' % (self.name,
                                                     self.key))
         self.status = IN_PROGRESS
+        self.requirements |= new_requirements
         self.store()  # Note: must be atomic update
 
         self.template_key = template_key
-        self.requirements = set(GraphKey(k, d.key)
-                                    for k, d in resource_data.items())
+        self.requirements = new_requirements
         self.props_data = new_props_data
         reality.reality.update_resource(self.physical_resource_id,
                                         self.props_data)
