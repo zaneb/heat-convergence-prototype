@@ -79,6 +79,9 @@ class Template(object):
             templates.update(self.key)
 
     def dependencies(self):
+        def dep_names(definition):
+            return list(definition.dependency_names()) or [None]
+
         edges = ((name, dep_name) for name, defn in self.resources.items()
-                                  for dep_name in defn.dependency_names())
+                                  for dep_name in dep_names(defn))
         return dependencies.Dependencies(edges)
