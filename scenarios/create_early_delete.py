@@ -6,5 +6,8 @@ example_template = Template({
     'E': RsrcDef({'ca': GetAtt('C', 'a')}, []),
 })
 engine.create_stack('foo', example_template)
-engine.noop(5)
-engine.call(verify, example_template)
+engine.noop(2)
+
+engine.delete_stack('foo')
+engine.noop(6)
+engine.call(verify, Template({}))

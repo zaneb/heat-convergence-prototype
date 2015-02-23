@@ -46,6 +46,17 @@ class RsrcDef(object):
             if isinstance(prop, GetRes):
                 yield prop.target_name
 
+    def resolved_props(self, resource_data):
+        def resolve_value(value):
+            if isinstance(value, GetAtt):
+                return resource_data[value.target_name].attrs[value.attr]
+            elif isinstance(value, GetRes):
+                return resource_data[value.target_name].refid
+            else:
+                return value
+
+        return {n: resolve_value(v) for n, v in self.properties.items()}
+
 
 class Template(object):
     def __init__(self, resources={}, key=None):

@@ -87,9 +87,6 @@ class MessageProcessor(object):
         method(message.data)
         return True
 
-    def testproxy(self, testcase=None):
-        return TestProxy(self, testcase)
-
     @asynchronous
     def noop(self, count=1):
         '''

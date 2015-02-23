@@ -4,6 +4,10 @@ from . import template
 
 
 class Engine(process.MessageProcessor):
+    '''
+    The message handler for requests coming from the user.
+    '''
+
     def __init__(self):
         super(Engine, self).__init__('engine')
 
@@ -13,3 +17,20 @@ class Engine(process.MessageProcessor):
 
         new_stack = stack.Stack(stack_name, tmpl)
         new_stack.create()
+
+    @process.asynchronous
+    def update_stack(self, stack_name, tmpl):
+        tmpl.store()
+
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.update(tmpl)
+
+    @process.asynchronous
+    def delete_stack(self, stack_name):
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.delete()
+
+    @process.asynchronous
+    def rollback_stack(self, stack_name):
+        existing_stack = stack.Stack.load_by_name(stack_name)
+        existing_stack.rollback()

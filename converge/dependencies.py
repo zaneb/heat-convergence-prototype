@@ -211,6 +211,9 @@ class Dependencies(object):
         edges = self._graph.edges()
         return type(self)(tuple(map(transform_key, e)) for e in edges)
 
+    def edges(self):
+        return self._graph.edges()
+
     def __getitem__(self, last):
         '''
         Return a partial dependency graph consisting of the specified node and
