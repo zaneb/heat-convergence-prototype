@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from .framework import datastore
 
@@ -15,6 +16,10 @@ stacks = datastore.Datastore('Stack',
                              'current_traversal', 'current_deps')
 
 
+def _make_traversal_id():
+    return str(uuid.uuid4())
+
+
 class Stack(object):
     '''
     Class to represent a Stack.
@@ -23,7 +28,7 @@ class Stack(object):
     simulation.
     '''
 
-    def __init__(self, name, tmpl, prev_tmpl_key=None, current_traversal=0,
+    def __init__(self, name, tmpl, prev_tmpl_key=None, current_traversal=None,
                  current_deps=tuple(), key=None):
         self.key = key
         self.tmpl = tmpl
@@ -31,7 +36,7 @@ class Stack(object):
             'name': name,
             'tmpl_key': tmpl.key,
             'prev_tmpl_key': prev_tmpl_key,
-            'current_traversal': current_traversal,
+            'current_traversal': current_traversal or _make_traversal_id(),
             'current_deps': current_deps,
         }
 
@@ -155,7 +160,7 @@ class Stack(object):
         '''
 
         previous_traversal = self.current_traversal
-        self.data['current_traversal'] += 1
+        self.data['current_traversal'] = _make_traversal_id()
         self.store()
 
         sync_point.delete_all(self.key, previous_traversal)
