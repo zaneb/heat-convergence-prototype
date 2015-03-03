@@ -7,7 +7,6 @@ from . import reality
 
 logger = logging.getLogger('rsrcs')
 
-GraphKey = collections.namedtuple('GraphKey', ['key'])
 InputData = collections.namedtuple('InputData', ['key', 'name',
                                                  'refid', 'attrs'])
 
@@ -113,8 +112,7 @@ class Resource(object):
         self.store()  # Note: must be atomic update
 
         self.template_key = template_key
-        self.requirements = set(GraphKey(d.key)
-                                    for k, d in resource_data.items())
+        self.requirements = set(d.key for k, d in resource_data.items())
         self.props_data = self.defn.resolved_props(resource_data)
 
         uuid = reality.reality.create_resource(self.name, self.props_data)
@@ -130,8 +128,7 @@ class Resource(object):
 
     def update(self, template_key, resource_data):
         new_props_data = self.defn.resolved_props(resource_data)
-        new_requirements = set(GraphKey(d.key)
-                                  for k, d in resource_data.items())
+        new_requirements = set(d.key for k, d in resource_data.items())
 
         for key, val in new_props_data.items():
             if val != self.props_data[key] and '!' in key:

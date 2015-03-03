@@ -94,8 +94,7 @@ class Stack(object):
         cleanup.
         '''
         def make_graph_key(res_name):
-            return (resource.GraphKey(current_resources[res_name].key),
-                    True)
+            return current_resources[res_name].key, True
 
         deps = current_template_deps.translate(make_graph_key)
 
@@ -107,8 +106,7 @@ class Stack(object):
                 if requirement in existing_resources:
                     deps += (requirement, False), (key, False)
             if rsrc.replaces in existing_resources:
-                deps += ((resource.GraphKey(rsrc.replaces), False),
-                         (key, False))
+                deps += ((rsrc.replaces, False), (key, False))
 
             if rsrc.name in current_template_deps:
                 deps += (key, False), make_graph_key(rsrc.name)
@@ -172,10 +170,6 @@ class Stack(object):
         # Load all extant resources from the DB
         ext_rsrcs = set(resource.Resource.load_all_from_stack(self))
 
-        def key(r):
-            '''Return the GraphKey for a resource name.'''
-            return resource.GraphKey(rsrcs[r].key)
-
         def best_existing_resource(rsrc_name):
             '''Return the best existing version of resource we want to keep.'''
             candidate = None
@@ -206,7 +200,7 @@ class Stack(object):
                 rsrc = resource.Resource(rsrc_name, self,
                                          definitions[rsrc_name], self.tmpl.key)
 
-            rqrs = set(key(r) for r in tmpl_deps.required_by(rsrc_name))
+            rqrs = set(rsrcs[r].key for r in tmpl_deps.required_by(rsrc_name))
             rsrc.requirers = rsrc.requirers | rqrs
 
             return rsrc
@@ -219,14 +213,13 @@ class Stack(object):
             rsrcs[rsrc_name] = rsrc
 
         # Generate the entire graph
-        dependencies = self._dependencies({resource.GraphKey(r.key): r
-                                               for r in ext_rsrcs},
+        dependencies = self._dependencies({r.key: r for r in ext_rsrcs},
                                           tmpl_deps, rsrcs)
         graph = dependencies.graph()
 
         # Create SyncPoints to measure progress
         for resource_key, forward in dependencies:
-            sync_point.create(sync_point.make_key(resource_key.key,
+            sync_point.create(sync_point.make_key(resource_key,
                                                   self.current_traversal,
                                                   'update' if forward
                                                            else 'cleanup'),

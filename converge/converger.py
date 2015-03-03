@@ -53,7 +53,7 @@ class Converger(process.MessageProcessor):
         associated resource.
         '''
         try:
-            rsrc = resource.Resource.load(resource_key.key)
+            rsrc = resource.Resource.load(resource_key)
         except resource.resources.NotFound:
             return
         tmpl = rsrc.stack.tmpl
@@ -74,7 +74,7 @@ class Converger(process.MessageProcessor):
                 self.check_resource_update(rsrc, tmpl.key, data)
             except resource.UpdateReplace:
                 replacement = rsrc.make_replacement(tmpl.key, data)
-                self.check_resource(resource.GraphKey(replacement.key),
+                self.check_resource(replacement.key,
                                     traversal_id, data, True)
                 return
             except resource.UpdateInProgress:
@@ -99,8 +99,7 @@ class Converger(process.MessageProcessor):
             # graph. Our real resource ID is sent in the input_data, so the
             # dependencies will get updated to point to this resource in time
             # for the next traversal.
-            graph_key = (resource.GraphKey(rsrc.replaces),
-                         forward)
+            graph_key = (rsrc.replaces, forward)
 
         try:
             for req, fwd in deps.required_by(graph_key):
@@ -154,7 +153,7 @@ class Converger(process.MessageProcessor):
         '''
         Trigger processing of a node iff all of its dependencies are satisfied.
         '''
-        key = sync_point.make_key(next_res_graph_key.key, traversal_id,
+        key = sync_point.make_key(next_res_graph_key, traversal_id,
                                   'update' if forward else 'cleanup')
 
         def do_check(target_key, data):
