@@ -261,7 +261,7 @@ class Stack(object):
         if traversal_id != self.current_traversal:
             return
 
-        logger.info('[%s(%d)] update traversal %d complete',
+        logger.info('[%s(%d)] update traversal %s complete',
                     self.data['name'], self.key, traversal_id)
 
         prev_prev_key = self.data['prev_tmpl_key']
