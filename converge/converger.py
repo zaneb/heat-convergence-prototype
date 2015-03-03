@@ -26,7 +26,7 @@ class Converger(process.MessageProcessor):
         '''
         rsrc.defn = rsrc.stack.tmpl.resources[rsrc.name]
 
-        input_data = {key.name: in_data for (key, fwd), in_data in data.items()}
+        input_data = {in_data.name: in_data for in_data in data.values()}
 
         if rsrc.physical_resource_id is None:
             rsrc.create(template_key, input_data)
@@ -74,8 +74,7 @@ class Converger(process.MessageProcessor):
                 self.check_resource_update(rsrc, tmpl.key, data)
             except resource.UpdateReplace:
                 replacement = rsrc.make_replacement(tmpl.key, data)
-                self.check_resource(resource.GraphKey(replacement.name,
-                                                      replacement.key),
+                self.check_resource(resource.GraphKey(replacement.key),
                                     traversal_id, data, True)
                 return
             except resource.UpdateInProgress:
@@ -83,7 +82,7 @@ class Converger(process.MessageProcessor):
 
             # We'll pass on this data so that subsequent resources can update
             # their dependencies and their get_resource and getattr values.
-            input_data = resource.InputData(rsrc.key,
+            input_data = resource.InputData(rsrc.key, rsrc.name,
                                             rsrc.refid(), rsrc.attributes())
         else:
             try:
@@ -100,7 +99,7 @@ class Converger(process.MessageProcessor):
             # graph. Our real resource ID is sent in the input_data, so the
             # dependencies will get updated to point to this resource in time
             # for the next traversal.
-            graph_key = (resource.GraphKey(rsrc.name, rsrc.replaces),
+            graph_key = (resource.GraphKey(rsrc.replaces),
                          forward)
 
         try:

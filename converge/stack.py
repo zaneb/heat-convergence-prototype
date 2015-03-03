@@ -94,8 +94,7 @@ class Stack(object):
         cleanup.
         '''
         def make_graph_key(res_name):
-            return (resource.GraphKey(res_name,
-                                      current_resources[res_name].key),
+            return (resource.GraphKey(current_resources[res_name].key),
                     True)
 
         deps = current_template_deps.translate(make_graph_key)
@@ -108,8 +107,7 @@ class Stack(object):
                 if requirement in existing_resources:
                     deps += (requirement, False), (key, False)
             if rsrc.replaces in existing_resources:
-                deps += ((resource.GraphKey(rsrc.name,
-                                            rsrc.replaces), False),
+                deps += ((resource.GraphKey(rsrc.replaces), False),
                          (key, False))
 
             if rsrc.name in current_template_deps:
@@ -176,7 +174,7 @@ class Stack(object):
 
         def key(r):
             '''Return the GraphKey for a resource name.'''
-            return resource.GraphKey(r, rsrcs[r].key)
+            return resource.GraphKey(rsrcs[r].key)
 
         def best_existing_resource(rsrc_name):
             '''Return the best existing version of resource we want to keep.'''
@@ -221,7 +219,7 @@ class Stack(object):
             rsrcs[rsrc_name] = rsrc
 
         # Generate the entire graph
-        dependencies = self._dependencies({resource.GraphKey(r.name, r.key): r
+        dependencies = self._dependencies({resource.GraphKey(r.key): r
                                                for r in ext_rsrcs},
                                           tmpl_deps, rsrcs)
         graph = dependencies.graph()
