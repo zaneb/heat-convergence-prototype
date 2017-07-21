@@ -12,7 +12,7 @@ InputData = collections.namedtuple('InputData', ['key', 'name',
 
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
-                                'needed_by', 'requirements',
+                                'needed_by', 'requires',
                                 'replaces', 'replaced_by',
                                 'props_data', 'phys_id',
                                 'status')
@@ -37,7 +37,7 @@ class Resource(object):
     simulation.
     '''
     def __init__(self, name, stack, defn, template_key=None,
-                 needed_by=set(), requirements=set(),
+                 needed_by=set(), requires=set(),
                  replaces=None, replaced_by=None,
                  props_data=None, phys_id=None,
                  status=COMPLETE,
@@ -48,7 +48,7 @@ class Resource(object):
         self.defn = defn
         self.template_key = template_key
         self.needed_by = needed_by
-        self.requirements = requirements
+        self.requires = requires
         self.replaces = replaces
         self.replaced_by = replaced_by
         self.props_data = props_data
@@ -62,7 +62,7 @@ class Resource(object):
                    None,
                    loaded.template_key,
                    loaded.needed_by,
-                   loaded.requirements,
+                   loaded.requires,
                    loaded.replaces,
                    loaded.replaced_by,
                    loaded.props_data,
@@ -87,7 +87,7 @@ class Resource(object):
             'stack_key': self.stack.key,
             'template_key': self.template_key,
             'needed_by': self.needed_by,
-            'requirements': self.requirements,
+            'requires': self.requires,
             'replaces': self.replaces,
             'replaced_by': self.replaced_by,
             'props_data': self.props_data,
@@ -112,7 +112,7 @@ class Resource(object):
         self.store()  # Note: must be atomic update
 
         self.template_key = template_key
-        self.requirements = set(d.key for k, d in resource_data.items())
+        self.requires = set(d.key for k, d in resource_data.items())
         self.props_data = self.defn.resolved_props(resource_data)
 
         uuid = reality.reality.create_resource(self.name, self.props_data)
@@ -143,11 +143,11 @@ class Resource(object):
         logger.info('[%s(%d)] Updating in place' % (self.name,
                                                     self.key))
         self.status = IN_PROGRESS
-        self.requirements |= new_requirements
+        self.requires |= new_requirements
         self.store()  # Note: must be atomic update
 
         self.template_key = template_key
-        self.requirements = new_requirements
+        self.requires = new_requirements
         self.props_data = new_props_data
         reality.reality.update_resource(self.physical_resource_id,
                                         self.props_data)

@@ -102,7 +102,7 @@ class Stack(object):
             deps += (key, False), None
 
             # Note: reversed edges as this is the cleanup part of the graph
-            for requirement in rsrc.requirements:
+            for requirement in rsrc.requires:
                 if requirement in existing_resources:
                     deps += (requirement, False), (key, False)
             if rsrc.replaces in existing_resources:
