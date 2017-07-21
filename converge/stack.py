@@ -199,10 +199,6 @@ class Stack(object):
             if rsrc is None:
                 rsrc = resource.Resource(rsrc_name, self,
                                          definitions[rsrc_name], self.tmpl.key)
-
-            nb = set(rsrcs[r].key for r in tmpl_deps.required_by(rsrc_name))
-            rsrc.needed_by = rsrc.needed_by | nb
-
             return rsrc
 
         # Resources that will form the update part of the graph

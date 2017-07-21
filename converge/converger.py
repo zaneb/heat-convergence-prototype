@@ -37,10 +37,6 @@ class Converger(process.MessageProcessor):
         '''
         Delete the Resource if appropriate.
         '''
-        # Clear out deleted resources from the needed_by list
-        rsrc.clear_needed_by(rsrc_key for rsrc_key, key in data.items()
-                                      if key is None)
-
         if rsrc.template_key != template_key:
             rsrc.delete()
 
