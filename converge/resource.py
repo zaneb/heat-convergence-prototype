@@ -12,7 +12,7 @@ InputData = collections.namedtuple('InputData', ['key', 'name',
 
 resources = datastore.Datastore('Resource',
                                 'key', 'stack_key', 'name', 'template_key',
-                                'requirers', 'requirements',
+                                'needed_by', 'requirements',
                                 'replaces', 'replaced_by',
                                 'props_data', 'phys_id',
                                 'status')
@@ -37,7 +37,7 @@ class Resource(object):
     simulation.
     '''
     def __init__(self, name, stack, defn, template_key=None,
-                 requirers=set(), requirements=set(),
+                 needed_by=set(), requirements=set(),
                  replaces=None, replaced_by=None,
                  props_data=None, phys_id=None,
                  status=COMPLETE,
@@ -47,7 +47,7 @@ class Resource(object):
         self.stack = stack
         self.defn = defn
         self.template_key = template_key
-        self.requirers = requirers
+        self.needed_by = needed_by
         self.requirements = requirements
         self.replaces = replaces
         self.replaced_by = replaced_by
@@ -61,7 +61,7 @@ class Resource(object):
         return cls(loaded.name, get_stack(loaded.stack_key),
                    None,
                    loaded.template_key,
-                   loaded.requirers,
+                   loaded.needed_by,
                    loaded.requirements,
                    loaded.replaces,
                    loaded.replaced_by,
@@ -86,7 +86,7 @@ class Resource(object):
             'name': self.name,
             'stack_key': self.stack.key,
             'template_key': self.template_key,
-            'requirers': self.requirers,
+            'needed_by': self.needed_by,
             'requirements': self.requirements,
             'replaces': self.replaces,
             'replaced_by': self.replaced_by,
@@ -160,7 +160,7 @@ class Resource(object):
     def make_replacement(self, template_key, resource_data):
         rsrc = Resource(self.name, self.stack,
                         self.defn, template_key,
-                        requirers=self.requirers, replaces=self.key)
+                        needed_by=self.needed_by, replaces=self.key)
         rsrc.store()
 
         self.replaced_by = rsrc.key
@@ -168,8 +168,8 @@ class Resource(object):
 
         return rsrc
 
-    def clear_requirers(self, gone_requirers):
-        self.requirers -= set(gone_requirers)
+    def clear_needed_by(self, gone_requirers):
+        self.needed_by -= set(gone_requirers)
         self.store()
 
     def delete(self):

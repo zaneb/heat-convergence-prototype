@@ -200,8 +200,8 @@ class Stack(object):
                 rsrc = resource.Resource(rsrc_name, self,
                                          definitions[rsrc_name], self.tmpl.key)
 
-            rqrs = set(rsrcs[r].key for r in tmpl_deps.required_by(rsrc_name))
-            rsrc.requirers = rsrc.requirers | rqrs
+            nb = set(rsrcs[r].key for r in tmpl_deps.required_by(rsrc_name))
+            rsrc.needed_by = rsrc.needed_by | nb
 
             return rsrc
 
