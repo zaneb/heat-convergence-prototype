@@ -141,6 +141,7 @@ class Resource(object):
                                                     self.key))
         self.status = IN_PROGRESS
         self.requires |= new_requirements
+        self.replaced_by = None
         self.store()  # Note: must be atomic update
 
         self.template_key = template_key
