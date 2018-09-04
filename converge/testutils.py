@@ -1,10 +1,12 @@
 import functools
 import logging
+import unittest
 
 from . import template
 
 
 logger = logging.getLogger('test')
+_testcase = unittest.TestCase('skipTest')
 
 
 def _format_args(args, kwargs):
@@ -15,8 +17,13 @@ def _format_args(args, kwargs):
 
 
 def _log_assertion(func_name, *args, **kwargs):
-    logger.warning('Ignoring %s(%s)',
-                   func_name, ', '.join(_format_args(args, kwargs)))
+    try:
+        getattr(_testcase, func_name)(*args, **kwargs)
+    except AssertionError as exc:
+        logger.error('Ignoring %s', exc)
+    else:
+        logger.info('Succeeded %s(%s)',
+                    func_name, ', '.join(_format_args(args, kwargs)))
 
 
 class DummyTestCase(object):
