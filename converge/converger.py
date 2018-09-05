@@ -64,7 +64,7 @@ class Converger(process.MessageProcessor):
         if forward:
             if (rsrc.replaced_by is not None and
                     rsrc.template_key != tmpl.key):
-                return
+                raise AssertionError('Unexpected update of replaced resource')
 
             try:
                 self.check_resource_update(rsrc, tmpl.key, data)
